@@ -1,4 +1,4 @@
-import Constants from 'expo-constants';
+import { getAnalysisServerUrl } from '@/constants/env';
 
 import type { MainAppLanguage } from './localization';
 
@@ -50,8 +50,6 @@ type AnalyzeTakeInput = {
   takeKind: 'first' | 'retry';
   previousMetrics?: MonthOneMetrics;
 };
-
-const DEFAULT_SERVER_URL = 'http://127.0.0.1:8000';
 
 export function monthOneDrillForWeek(weekNumber: number): MonthOneDrillId | null {
   if (weekNumber === 1) {
@@ -108,11 +106,3 @@ export async function analyzeMonthOneTake(input: AnalyzeTakeInput): Promise<Mont
   }
 }
 
-function getAnalysisServerUrl() {
-  const configured =
-    process.env.EXPO_PUBLIC_ANALYSIS_SERVER_URL ??
-    (Constants.expoConfig?.extra?.analysisServerUrl as string | undefined) ??
-    DEFAULT_SERVER_URL;
-
-  return configured.replace(/\/$/, '');
-}

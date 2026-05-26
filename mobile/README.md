@@ -10,7 +10,15 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Configure environment
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Set `EXPO_PUBLIC_ANALYSIS_SERVER_URL` in `.env` to your analysis server URL. Restart Expo after changing it.
+
+3. Start the app
 
    ```bash
    npx expo start
