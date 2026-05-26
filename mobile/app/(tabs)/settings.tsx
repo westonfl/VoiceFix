@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { VoiceFixTheme as theme } from '@/constants/theme';
 import { displayPreferenceValue, mainAppLanguageOptions, mainAppText } from '@/features/prototype/localization';
-import { AnalysisServerError, analyzeMonthOneTake } from '@/features/prototype/serverAnalysis';
+import { AnalysisServerError, analyzeMonthOneTake, type MonthOneAnalysisResponse } from '@/features/prototype/serverAnalysis';
 import { usePrototype } from '@/features/prototype/state';
 
 export default function SettingsScreen() {
@@ -27,21 +27,45 @@ export default function SettingsScreen() {
         return;
       }
 
-      const analysis = await analyzeMonthOneTake({
-        uri: result.assets[0].uri,
-        drillId: 'resonance_vowel',
-        language: state.language,
-        takeKind: 'first',
-      });
+      let usedCompatibilityFallback = false;
+      let analysis: MonthOneAnalysisResponse;
+
+      try {
+        analysis = await analyzeMonthOneTake({
+          uri: result.assets[0].uri,
+          drillId: 'resonance_vowel',
+          language: state.language,
+          takeKind: 'first',
+        });
+      } catch (error) {
+        if (!(error instanceof AnalysisServerError) || error.status !== 422) {
+          throw error;
+        }
+
+        usedCompatibilityFallback = true;
+        analysis = await analyzeMonthOneTake({
+          uri: result.assets[0].uri,
+          drillId: 'mmm_resonance',
+          language: state.language,
+          takeKind: 'first',
+        });
+      }
 
       Alert.alert(
         text.settings.analyzeAudioTitle,
         [
           `${analysis.drillId} · ${analysis.quality}`,
-          `resonance ${analysis.metrics.resonanceScore.toFixed(2)} · forward ${analysis.metrics.forwardEnergyRatio.toFixed(2)} · throat ${analysis.metrics.throatEnergyRatio.toFixed(2)}`,
+          usedCompatibilityFallback
+            ? state.language === 'ko'
+              ? '서버가 resonance_vowel을 거부해서 mmm_resonance로 다시 보냈습니다.'
+              : 'Server rejected resonance_vowel, so VoiceFix retried with mmm_resonance.'
+            : null,
+          `resonance ${formatDebugMetric(analysis.metrics.resonanceScore)} · forward ${formatDebugMetric(analysis.metrics.forwardEnergyRatio)} · throat ${formatDebugMetric(analysis.metrics.throatEnergyRatio)}`,
           analysis.feedback.whatWeHeard,
           analysis.feedback.oneThingToTry,
-        ].join('\n\n'),
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
       );
     } catch (error) {
       const detail =
@@ -121,6 +145,10 @@ export default function SettingsScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function formatDebugMetric(value: number | undefined) {
+  return typeof value === 'number' ? value.toFixed(2) : 'n/a';
 }
 
 function SettingRow({
