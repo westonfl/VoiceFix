@@ -5,26 +5,47 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+const tintColorLight = '#17C9D2';
+const tintColorDark = '#32E6E2';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: '#F1F7FA',
+    background: '#0B1018',
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    icon: '#788897',
+    tabIconDefault: '#788897',
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
+    text: '#F1F7FA',
+    background: '#070A10',
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    icon: '#788897',
+    tabIconDefault: '#788897',
     tabIconSelected: tintColorDark,
   },
+};
+
+export const VoiceFixTheme = {
+  background: '#0B1018',
+  backgroundDeep: '#070A10',
+  surface: '#151E2B',
+  surfaceRaised: '#101722',
+  surfacePressed: '#203044',
+  text: '#F1F7FA',
+  textMuted: '#B8C7D3',
+  textSubtle: '#788897',
+  border: '#203044',
+  primary: '#17C9D2',
+  primaryBright: '#32E6E2',
+  primaryPressed: '#0C7F8B',
+  primarySoft: '#073F49',
+  journal: '#9B7CFF',
+  energy: '#F05ACB',
+  caution: '#FF7A70',
+  warning: '#F4B85E',
+  success: '#64D99A',
 };
 
 export const Fonts = Platform.select({

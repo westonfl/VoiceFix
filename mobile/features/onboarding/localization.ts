@@ -1,0 +1,773 @@
+import type { Language, OnboardingOption, OnboardingScreen, StarterPlan } from './types';
+import { answerTranslations, phraseTranslations } from './phraseTranslations';
+
+type LocalizedScreen = Partial<
+  Pick<OnboardingScreen, 'shortTitle' | 'eyebrow' | 'title' | 'body' | 'primaryAction' | 'secondaryAction' | 'bullets'>
+> & {
+  comparison?: Array<{ label: string; detail: string }>;
+  options?: Record<string, Pick<OnboardingOption, 'label' | 'detail'>>;
+  recording?: {
+    title?: string;
+    instruction?: string;
+    listensFor?: string[];
+  };
+};
+
+export const languageOptions: Array<{ id: Language; flag: string; abbr: string; name: string }> = [
+  { id: 'en', flag: '🇺🇸', abbr: 'EN', name: 'English' },
+  { id: 'es', flag: '🇪🇸', abbr: 'ES', name: 'Español' },
+  { id: 'pt', flag: '🇧🇷', abbr: 'PT', name: 'Português' },
+  { id: 'fr', flag: '🇫🇷', abbr: 'FR', name: 'Français' },
+  { id: 'de', flag: '🇩🇪', abbr: 'DE', name: 'Deutsch' },
+  { id: 'ja', flag: '🇯🇵', abbr: 'JA', name: '日本語' },
+  { id: 'ko', flag: '🇰🇷', abbr: 'KO', name: '한국어' },
+  { id: 'zhHans', flag: '🇨🇳', abbr: 'ZH-CN', name: '简体中文' },
+  { id: 'zhHant', flag: '🇹🇼', abbr: 'ZH-TW', name: '繁體中文' },
+  { id: 'hi', flag: '🇮🇳', abbr: 'HI', name: 'हिन्दी' },
+  { id: 'ar', flag: '🇸🇦', abbr: 'AR', name: 'العربية' },
+  { id: 'id', flag: '🇮🇩', abbr: 'ID', name: 'Bahasa Indonesia' },
+];
+
+const koScreens: Record<string, LocalizedScreen> = {
+  'ONB-01': {
+    shortTitle: '시작',
+    eyebrow: 'VoiceFix',
+    title: '무엇이 달라졌는지 들어보세요.',
+    body: '짧은 음성 체크, 한 가지 유용한 힌트, 같은 테이크를 다시 해보는 개인 보이스 랩입니다.',
+    primaryAction: '스튜디오 입장하기',
+  },
+  'ONB-02': {
+    shortTitle: '약속',
+    eyebrow: '핵심 약속',
+    title: '첫 레슨 전에 내 목소리 계획을 만듭니다.',
+    body: 'VoiceFix는 목표, 편안함의 정도, 짧은 녹음 몇 개를 먼저 확인합니다. 그리고 수많은 레슨 대신 하나의 시작 초점을 제안합니다.',
+    primaryAction: '내 보이스 플랜 만들기',
+    bullets: ['짧은 음성 체크', '가능성 높은 이슈 하나', '다음에 시도할 한 가지'],
+  },
+  'ONB-03': {
+    shortTitle: '노래방 아님',
+    eyebrow: '다른 연습 루프',
+    title: '이건 노래방 점수가 아닙니다.',
+    body: '노래방 앱은 음을 맞췄는지 묻습니다. VoiceFix는 무엇이 음을 불안정하게 만들었을지 보고, 같은 과제를 다시 시도하게 합니다.',
+    primaryAction: '계속하기',
+    comparison: [
+      { label: '노래방 앱', detail: '음을 맞췄나요?' },
+      { label: 'VoiceFix', detail: '테이크 사이에 무엇이 달라졌나요?' },
+      { label: '내 플랜', detail: '힌트 하나, 같은 드릴, 다시 시도.' },
+    ],
+  },
+  'ONB-04': {
+    shortTitle: '목표',
+    eyebrow: '개인 목표',
+    title: '가장 먼저 고치고 싶은 것은 무엇인가요?',
+    body: '이 답변이 첫 플랜의 방향을 정합니다.',
+    primaryAction: '계속하기',
+    options: {
+      pitch: { label: '음을 더 안정적으로 맞추기', detail: '음을 놓치거나, 미끄러지거나, 고정하기 어렵습니다.' },
+      tone: { label: '흔들리거나 얇은 소리 줄이기', detail: '녹음한 목소리가 불안정하거나 작게 느껴집니다.' },
+      range: { label: '밀어붙이지 않고 높은 음 부르기', detail: '높은 음이 조이거나 힘으로 내는 느낌입니다.' },
+      confidence: { label: '녹음할 때 덜 부끄럽기', detail: '견딜 수 있는 사적인 연습이 필요합니다.' },
+      habit: { label: '꾸준한 연습 습관 만들기', detail: '랜덤 드릴이 아니라 반복 가능한 플랜이 필요합니다.' },
+    },
+  },
+  'ONB-05': {
+    shortTitle: '사용 상황',
+    eyebrow: '목소리를 쓰는 곳',
+    title: '어디에서 목소리를 쓰고 싶나요?',
+    body: '실제로 중요한 상황에 맞게 플랜이 달라져야 합니다.',
+    primaryAction: '계속하기',
+    options: {
+      home: { label: '집에서 혼자 노래하기', detail: '사적인 연습, 낮은 부담.' },
+      karaoke: { label: '노래방', detail: '익숙한 노래에서 자신감 만들기.' },
+      group: { label: '합창 / 예배 / 그룹 노래', detail: '블렌딩, 음정, 안정감.' },
+      covers: { label: '커버 영상 올리기', detail: '더 깔끔한 테이크와 반복 가능한 발전.' },
+      lessons: { label: '레슨 준비하기', detail: '더 명확한 질문을 가지고 레슨에 가기.' },
+      speaking: { label: '말하기 / 마이크 자신감', detail: '노래 밖에서도 필요한 목소리 컨트롤.' },
+    },
+  },
+  'ONB-06': {
+    shortTitle: '경험',
+    eyebrow: '출발점',
+    title: '보컬 경험은 어느 정도인가요?',
+    body: '난이도와 설명의 깊이를 조절합니다.',
+    primaryAction: '계속하기',
+    options: {
+      beginner: { label: '완전 초보', detail: '아직 꾸준한 연습 루틴이 없습니다.' },
+      'self-taught': { label: '독학 중', detail: '영상, 앱, 노래, 시행착오로 연습합니다.' },
+      returning: { label: '다시 시작하는 중', detail: '예전에 노래했지만 다시 구조가 필요합니다.' },
+      'lessons-before': { label: '레슨 경험 있음', detail: '몇 가지 용어는 알지만 연습 루프가 필요합니다.' },
+      musician: { label: '음악 경험은 있지만 보컬은 미훈련', detail: '귀가 목소리보다 앞서 있을 수 있습니다.' },
+    },
+  },
+  'ONB-07': {
+    shortTitle: '이력',
+    eyebrow: '학습 이력',
+    title: '이미 무엇을 시도해봤나요?',
+    body: '또 하나의 끊어진 연습 목록이 되지 않기 위해 확인합니다.',
+    primaryAction: '계속하기',
+    options: {
+      youtube: { label: '유튜브 레슨', detail: '유용하지만 개인화가 어렵습니다.' },
+      tuner: { label: '튜너 / 음정 앱', detail: '신호는 좋지만 설명이 부족합니다.' },
+      'karaoke-apps': { label: '노래방 앱', detail: '재미있지만 점수 중심인 경우가 많습니다.' },
+      coach: { label: '선생님 / 코치', detail: '사람의 피드백은 좋지만 매일의 계측은 어렵습니다.' },
+      choir: { label: '합창 연습', detail: '그룹 맥락과 반복이 있습니다.' },
+      songs: { label: '주로 노래만 부름', detail: '실전 소재는 좋지만 원인을 분리하기 어렵습니다.' },
+    },
+  },
+  'ONB-08': {
+    shortTitle: '증상',
+    eyebrow: '목소리 단서',
+    title: '무엇이 가장 자주 이상하게 들리나요?',
+    body: '익숙한 것을 모두 고르세요. 음성 체크가 부드럽게 교차 확인합니다.',
+    primaryAction: '계속하기',
+    options: {
+      fade: { label: '끝에서 소리가 약해집니다', detail: '호흡 흐름 경로를 정하는 데 유용합니다.' },
+      'pitch-drift': { label: '음이 낮거나 높게 흐릅니다', detail: '음정 매칭 드릴에 유용합니다.' },
+      wobble: { label: '음이 흔들립니다', detail: '더 작은 목표부터 시작할 수 있습니다.' },
+      breathy: { label: '소리가 숨 섞여 들립니다', detail: '안정감과 선명도에 영향을 줄 수 있습니다.' },
+      squeezed: { label: '소리가 거칠거나 조입니다', detail: '밀어붙이는 연습을 피해야 합니다.' },
+      crack: { label: '높이 올라갈 때 갈라집니다', detail: '음역 연습은 부드럽게 진행해야 합니다.' },
+      timing: { label: '박자가 빨라지거나 흐트러집니다', detail: '에코 드릴을 더 느리게 유지할 수 있습니다.' },
+      unknown: { label: '무엇이 문제인지 모르겠습니다', detail: '그래서 베이스라인 체크가 필요합니다.' },
+    },
+  },
+  'ONB-09': {
+    shortTitle: '답답함',
+    eyebrow: '가장 어려운 부분',
+    title: '지금 가장 답답한 것은 무엇인가요?',
+    body: '기술과 감정 모두 연습 지속에 영향을 줍니다.',
+    primaryAction: '계속하기',
+    options: {
+      'what-to-practice': { label: '무엇을 연습해야 할지 모르겠습니다', detail: '앱이 다음 드릴을 골라줘야 합니다.' },
+      recordings: { label: '녹음하면 더 못 부르는 것 같습니다', detail: '재생은 부드럽고 유용해야 합니다.' },
+      'needs-guide': { label: '가이드가 있을 때만 음을 맞춥니다', detail: '나중에는 기준음을 서서히 줄이는 과정이 중요합니다.' },
+      embarrassed: { label: '연습하는 게 부끄럽습니다', detail: '작고 사적인 성공이 먼저 필요합니다.' },
+      inconsistent: { label: '좋아졌다가 다시 잃어버립니다', detail: '반복 가능한 베이스라인이 변화의 단서를 보여줍니다.' },
+    },
+  },
+  'ONB-10': {
+    shortTitle: '재생',
+    eyebrow: '녹음 재생 편안함',
+    title: '녹음한 내 목소리를 듣는 건 어떤가요?',
+    body: '재생은 선택적으로 두면서도 테이크 비교는 할 수 있습니다.',
+    primaryAction: '계속하기',
+    options: {
+      'hate-playback': { label: '녹음한 목소리를 듣기 싫습니다', detail: '테이크 후 갑자기 자동 재생하지 않습니다.' },
+      'if-helpful': { label: '도움이 된다면 들을 수 있습니다', detail: '먼저 쉬운 설명을 보여준 뒤 재생합니다.' },
+      'before-after': { label: '비포/애프터를 듣고 싶습니다', detail: '비교를 더 눈에 띄게 보여줍니다.' },
+      'metrics-first': { label: '먼저 지표, 재생은 나중에', detail: '오디오 전에 신호 설명을 먼저 보여줍니다.' },
+    },
+  },
+  'ONB-11': {
+    shortTitle: '피드백',
+    eyebrow: '피드백 스타일',
+    title: '처음 피드백은 어떤 톤이 좋나요?',
+    body: '같은 분석이라도 말투의 온도는 달라질 수 있습니다.',
+    primaryAction: '계속하기',
+    options: {
+      gentle: { label: '부드럽고 격려하는 톤', detail: '작은 힌트, 낮은 부담.' },
+      direct: { label: '직접적이지만 날카롭지 않게', detail: '명확한 관찰과 빠른 다음 행동.' },
+      technical: { label: '기초를 이해한 뒤 기술적으로', detail: '쉬운 설명 먼저, 신호 세부정보는 나중에.' },
+    },
+  },
+  'ONB-12': {
+    shortTitle: '연습 시간',
+    eyebrow: '루틴 맞춤',
+    title: '플랜은 어느 정도 연습 시간을 예상하면 될까요?',
+    body: '한 번 멋져 보이는 플랜보다 반복할 수 있는 플랜이 낫습니다.',
+    primaryAction: '계속하기',
+    options: {
+      '5': { label: '대부분의 날 5분', detail: '짧은 체크와 한 번의 재시도.' },
+      '10': { label: '10-12분', detail: '드릴 3개, 각각 한 번 재시도.' },
+      '20': { label: '20분', detail: '더 많은 반복과 깊은 저널.' },
+      unsure: { label: '아직 모르겠습니다', detail: '작게 시작하고 나중에 조정합니다.' },
+    },
+  },
+  'ONB-13': {
+    shortTitle: '환경',
+    eyebrow: '연습 환경',
+    title: '주로 어디에서 연습하나요?',
+    body: '첫 녹음이 어색하거나 불가능하게 느껴지지 않도록 조정합니다.',
+    primaryAction: '계속하기',
+    options: {
+      'quiet-room': { label: '조용한 방', detail: '전체 체크와 재생에 가장 좋습니다.' },
+      'shared-space': { label: '공유 공간', detail: '과제를 더 짧고 부드럽게 유지합니다.' },
+      car: { label: '차 안', detail: '프라이버시는 좋지만 음향이 다릅니다.' },
+      headphones: { label: '헤드폰 사용 가능', detail: '기준음을 더 명확히 들을 수 있습니다.' },
+      'phone-mic': { label: '휴대폰 마이크만 사용', detail: '기본 베이스라인 경로입니다.' },
+      'quiet-practice': { label: '조용히 연습해야 합니다', detail: '허밍과 부드러운 드릴을 먼저 사용합니다.' },
+    },
+  },
+  'ONB-14': {
+    shortTitle: '안전',
+    eyebrow: '목소리 건강',
+    title: '통증, 조임, 밀어붙이는 느낌이 있나요?',
+    body: 'VoiceFix는 연습 피드백이며 의학적 조언이 아닙니다. 노래할 때 아프면 멈추고 전문가 상담을 고려하세요.',
+    primaryAction: '계속하기',
+    options: {
+      none: { label: '통증이나 조임 없음', detail: '일반 초보 난이도로 시작할 수 있습니다.' },
+      tight: { label: '가끔 조입니다', detail: '음역을 낮게 유지하고 편안함을 확인합니다.' },
+      pain: { label: '노래할 때 통증이 있습니다', detail: '부드러운 리셋과 전문가 안내로 시작합니다.' },
+      unsure: { label: '잘 모르겠습니다', detail: '조심스러운 기본값을 사용합니다.' },
+    },
+  },
+  'ONB-15': {
+    shortTitle: '개인정보',
+    eyebrow: '개인정보와 마이크 신뢰',
+    title: 'VoiceFix가 언제 듣는지는 사용자가 통제합니다.',
+    body: 'VoiceFix는 사용자가 시작한 연습 중에만 듣습니다. 클립은 기본적으로 비공개이며 나중에 삭제할 수 있습니다.',
+    primaryAction: '마이크로 계속하기',
+    bullets: ['갑작스러운 녹음 없음', '클립은 기본 비공개', '저널을 위해서만 저장'],
+  },
+  'ONB-16': {
+    shortTitle: '마이크',
+    eyebrow: '마이크',
+    title: '음성 체크를 위해 마이크를 허용하세요.',
+    body: '이 프로토타입에서는 온보딩 흐름을 볼 수 있도록 권한을 시뮬레이션합니다. 실제 앱에서는 여기서 OS 마이크 권한을 요청합니다.',
+    primaryAction: '마이크 허용',
+    secondaryAction: '음성 체크 없이 계속',
+  },
+  'ONB-17': {
+    shortTitle: '체크 소개',
+    eyebrow: '음성 체크',
+    title: '짧은 녹음 5개가 첫 플랜을 만듭니다.',
+    body: '이건 점수가 아닙니다. 가장 안전한 첫 초점을 제안하기 위한 패턴을 듣습니다.',
+    primaryAction: '음성 체크 시작',
+    bullets: ['아프면 멈추기', '짧은 샘플만', '유명 가수와 비교하지 않음'],
+  },
+  'ONB-18': {
+    shortTitle: '히스',
+    eyebrow: '음성 체크 1/5',
+    title: '고른 히스',
+    primaryAction: '샘플 저장',
+    recording: {
+      title: '고른 히스',
+      instruction: '편하게 숨을 들이마신 뒤, 부드럽게 "sss" 소리를 내고 자연스럽게 멈출 때까지 고르게 유지하세요.',
+      listensFor: ['길이', '고른 정도', '끝부분 약해짐'],
+    },
+  },
+  'ONB-19': {
+    shortTitle: '허밍',
+    eyebrow: '음성 체크 2/5',
+    title: '부드러운 허밍',
+    primaryAction: '샘플 저장',
+    recording: {
+      title: '부드러운 허밍',
+      instruction: '편한 음에서 부드럽게 허밍하세요. 크지 않고 쉬워야 합니다.',
+      listensFor: ['안정감', '거친 소리 단서', '편안함 신호'],
+    },
+  },
+  'ONB-20': {
+    shortTitle: '지속음',
+    eyebrow: '음성 체크 3/5',
+    title: '아 모음 유지',
+    primaryAction: '샘플 저장',
+    recording: {
+      title: '아 모음 유지',
+      instruction: '편한 음에서 "아"를 약 5초 동안 불러보세요.',
+      listensFor: ['음정 흐름', '흔들림', '끝부분 약해짐'],
+    },
+  },
+  'ONB-21': {
+    shortTitle: '음정 맞추기',
+    eyebrow: '음성 체크 4/5',
+    title: '음정 맞추기',
+    primaryAction: '샘플 저장',
+    secondaryAction: '기준음 재생',
+    recording: {
+      title: '음정 맞추기',
+      instruction: '음을 듣고 "아"로 최대한 맞춰보세요.',
+      listensFor: ['높거나 낮은 경향', '음을 찾는 속도', '맞춘 뒤 안정감'],
+    },
+  },
+  'ONB-22': {
+    shortTitle: '에코',
+    eyebrow: '음성 체크 5/5',
+    title: '세 음 에코',
+    primaryAction: '샘플 저장',
+    secondaryAction: '패턴 재생',
+    recording: {
+      title: '세 음 에코',
+      instruction: '느린 세 음을 듣고 "아"로 따라 불러보세요.',
+      listensFor: ['가장 어려운 음', '움직일 때 안정감', '타이밍 자신감'],
+    },
+  },
+  'ONB-23': {
+    shortTitle: '분석',
+    eyebrow: '플랜 만드는 중',
+    title: '답변과 음성 샘플을 읽고 있습니다.',
+    body: 'VoiceFix는 재능을 평가하는 것이 아니라 첫 초점을 고르는 중입니다.',
+    primaryAction: '진단 요약 보기',
+    bullets: ['목표 읽는 중', '편안함과 안전 확인 중', '5개 샘플 비교 중', '첫 14일 플랜 구성 중'],
+  },
+  'ONB-24': {
+    shortTitle: '요약',
+    eyebrow: '진단 요약',
+    title: '베이스라인이 이렇게 제안합니다.',
+    body: '표현은 조심해야 합니다. 이것은 시작 가설이지 완전한 진단이 아닙니다.',
+    primaryAction: '내 플랜 보기',
+  },
+  'ONB-25': {
+    shortTitle: '플랜',
+    eyebrow: '14일 플랜',
+    title: '첫 플랜이 준비됐습니다.',
+    primaryAction: '첫 세션 미리보기',
+  },
+  'ONB-26': {
+    shortTitle: '세션',
+    eyebrow: '첫 세션',
+    title: '드릴 3개. 각각 한 번 재시도.',
+    body: '각 드릴은 같은 루프입니다. 녹음하고, 한 가지 힌트를 받고, 다시 시도하고, 내 이전 테이크와 비교합니다.',
+    primaryAction: '계속하기',
+  },
+  'ONB-27': {
+    shortTitle: '무료',
+    eyebrow: '무료로 시작',
+    title: '첫 의미 있는 세션은 결제 전에 해봅니다.',
+    body: '프리미엄은 나중에 더 깊은 기록을 열 수 있지만, 첫 유용한 결과는 지금 경험해야 합니다.',
+    primaryAction: '무료 첫 세션 시작',
+    secondaryAction: '프리미엄 보기',
+  },
+  'ONB-28': {
+    shortTitle: '준비됨',
+    eyebrow: '준비 완료',
+    title: '준비됐습니다.',
+    body: '첫 세션에는 초점, 드릴 3개, 안전 리마인더가 준비되어 있습니다.',
+    primaryAction: '첫 세션 시작',
+    secondaryAction: '나중에 하기',
+  },
+};
+
+export function localizeScreen(screen: OnboardingScreen, language: Language): OnboardingScreen {
+  if (language === 'en') {
+    return screen;
+  }
+
+  if (language !== 'ko') {
+    return translateScreen(screen, language);
+  }
+
+  const translation = koScreens[screen.id];
+  if (!translation) {
+    return translateScreen(screen, language);
+  }
+
+  return {
+    ...screen,
+    ...translation,
+    comparison: screen.comparison?.map((item, index) => ({
+      ...item,
+      ...translation.comparison?.[index],
+    })),
+    options: screen.options?.map((option) => ({
+      ...option,
+      ...translation.options?.[option.id],
+    })),
+    recording: screen.recording
+      ? {
+          ...screen.recording,
+          ...translation.recording,
+        }
+      : undefined,
+  };
+}
+
+function translateScreen(screen: OnboardingScreen, language: Language): OnboardingScreen {
+  return {
+    ...screen,
+    shortTitle: translatePhrase(screen.shortTitle, language),
+    eyebrow: translatePhrase(screen.eyebrow, language),
+    title: translatePhrase(screen.title, language),
+    body: screen.body ? translatePhrase(screen.body, language) : undefined,
+    primaryAction: translatePhrase(screen.primaryAction, language),
+    secondaryAction: screen.secondaryAction ? translatePhrase(screen.secondaryAction, language) : undefined,
+    bullets: screen.bullets?.map((item) => translatePhrase(item, language)),
+    comparison: screen.comparison?.map((item) => ({
+      ...item,
+      label: translatePhrase(item.label, language),
+      detail: translatePhrase(item.detail, language),
+    })),
+    options: screen.options?.map((option) => ({
+      ...option,
+      label: translatePhrase(option.label, language),
+      detail: translatePhrase(option.detail, language),
+    })),
+    recording: screen.recording
+      ? {
+          ...screen.recording,
+          title: translatePhrase(screen.recording.title, language),
+          instruction: translatePhrase(screen.recording.instruction, language),
+          listensFor: screen.recording.listensFor.map((item) => translatePhrase(item, language)),
+        }
+      : undefined,
+  };
+}
+
+function translatePhrase(text: string, language: Language) {
+  if (language === 'en' || language === 'ko') {
+    return text;
+  }
+
+  return phraseTranslations[text]?.[language] ?? text;
+}
+
+export const uiText = {
+  en: {
+    continue: 'Continue',
+    sample: 'Sample',
+    of: 'of',
+    actionUnavailable: 'is available after audio wiring.',
+    fromAnswers: 'From your answers',
+    fromVoiceCheck: 'From the voice check',
+    carefulClaim: 'Careful claim',
+    carefulClaimBody: 'This suggests a first focus, not a medical or full vocal diagnosis.',
+    recapRoutine: 'minute routine',
+    starterHypothesis: 'The starter hypothesis points to',
+    firstCue: 'First cue:',
+    freeNow: 'Free now',
+    freeNowBody: 'First personalized session, basic feedback, and limited daily checks.',
+    premiumLater: 'Premium later',
+    premiumLaterBody: 'Unlimited sessions, deeper history, and more plan adaptation.',
+    focus: 'Focus:',
+    stopIfHurts: 'Stop if anything hurts',
+  },
+  ko: {
+    continue: '계속하기',
+    sample: '샘플',
+    of: '/',
+    actionUnavailable: '기능은 실제 오디오 연결 후 사용할 수 있습니다.',
+    fromAnswers: '답변에서 본 내용',
+    fromVoiceCheck: '음성 체크에서 본 내용',
+    carefulClaim: '조심스러운 해석',
+    carefulClaimBody: '이것은 첫 초점을 제안하는 것이며, 의학적 또는 완전한 보컬 진단이 아닙니다.',
+    recapRoutine: '분 루틴',
+    starterHypothesis: '시작 가설은 다음 초점을 가리킵니다:',
+    firstCue: '첫 힌트:',
+    freeNow: '지금 무료',
+    freeNowBody: '첫 개인화 세션, 기본 피드백, 제한된 일일 체크.',
+    premiumLater: '프리미엄은 나중에',
+    premiumLaterBody: '무제한 세션, 더 깊은 기록, 더 많은 플랜 조정.',
+    focus: '초점:',
+    stopIfHurts: '아프면 멈추기',
+  },
+  es: {
+    continue: 'Continuar',
+    sample: 'Muestra',
+    of: 'de',
+    actionUnavailable: 'estará disponible cuando conectemos el audio real.',
+    fromAnswers: 'Según tus respuestas',
+    fromVoiceCheck: 'Según la prueba de voz',
+    carefulClaim: 'Interpretación cuidadosa',
+    carefulClaimBody: 'Esto sugiere un primer enfoque, no un diagnóstico vocal o médico completo.',
+    recapRoutine: 'minutos de rutina',
+    starterHypothesis: 'La hipótesis inicial apunta a',
+    firstCue: 'Primer consejo:',
+    freeNow: 'Gratis ahora',
+    freeNowBody: 'Primera sesión personalizada, feedback básico y controles diarios limitados.',
+    premiumLater: 'Premium después',
+    premiumLaterBody: 'Sesiones ilimitadas, historial más profundo y más adaptación del plan.',
+    focus: 'Enfoque:',
+    stopIfHurts: 'Para si algo duele',
+  },
+  pt: {
+    continue: 'Continuar',
+    sample: 'Amostra',
+    of: 'de',
+    actionUnavailable: 'ficará disponível quando o áudio real for conectado.',
+    fromAnswers: 'Pelas suas respostas',
+    fromVoiceCheck: 'Pela checagem vocal',
+    carefulClaim: 'Interpretação cuidadosa',
+    carefulClaimBody: 'Isso sugere um primeiro foco, não um diagnóstico vocal ou médico completo.',
+    recapRoutine: 'minutos de rotina',
+    starterHypothesis: 'A hipótese inicial aponta para',
+    firstCue: 'Primeira dica:',
+    freeNow: 'Grátis agora',
+    freeNowBody: 'Primeira sessão personalizada, feedback básico e checagens diárias limitadas.',
+    premiumLater: 'Premium depois',
+    premiumLaterBody: 'Sessões ilimitadas, histórico mais profundo e mais adaptação do plano.',
+    focus: 'Foco:',
+    stopIfHurts: 'Pare se doer',
+  },
+  fr: {
+    continue: 'Continuer',
+    sample: 'Échantillon',
+    of: 'sur',
+    actionUnavailable: 'sera disponible après le branchement du vrai audio.',
+    fromAnswers: 'D’après vos réponses',
+    fromVoiceCheck: 'D’après le test vocal',
+    carefulClaim: 'Interprétation prudente',
+    carefulClaimBody: 'Cela suggère un premier axe, pas un diagnostic vocal ou médical complet.',
+    recapRoutine: 'minutes de routine',
+    starterHypothesis: 'L’hypothèse de départ pointe vers',
+    firstCue: 'Premier conseil :',
+    freeNow: 'Gratuit maintenant',
+    freeNowBody: 'Première séance personnalisée, retour de base et vérifications quotidiennes limitées.',
+    premiumLater: 'Premium plus tard',
+    premiumLaterBody: 'Séances illimitées, historique plus profond et meilleure adaptation du plan.',
+    focus: 'Focus :',
+    stopIfHurts: 'Arrêtez si ça fait mal',
+  },
+  de: {
+    continue: 'Weiter',
+    sample: 'Probe',
+    of: 'von',
+    actionUnavailable: 'ist verfügbar, sobald echtes Audio verbunden ist.',
+    fromAnswers: 'Aus deinen Antworten',
+    fromVoiceCheck: 'Aus dem Stimmcheck',
+    carefulClaim: 'Vorsichtige Einordnung',
+    carefulClaimBody: 'Das schlägt einen ersten Fokus vor, ist aber keine vollständige stimmliche oder medizinische Diagnose.',
+    recapRoutine: 'Minuten Routine',
+    starterHypothesis: 'Die erste Hypothese zeigt auf',
+    firstCue: 'Erster Hinweis:',
+    freeNow: 'Jetzt kostenlos',
+    freeNowBody: 'Erste personalisierte Session, Basisfeedback und begrenzte tägliche Checks.',
+    premiumLater: 'Premium später',
+    premiumLaterBody: 'Unbegrenzte Sessions, tiefere Historie und mehr Plananpassung.',
+    focus: 'Fokus:',
+    stopIfHurts: 'Stoppe, wenn etwas weh tut',
+  },
+  ja: {
+    continue: '続ける',
+    sample: 'サンプル',
+    of: '/',
+    actionUnavailable: 'は実際の音声接続後に使えるようになります。',
+    fromAnswers: '回答から',
+    fromVoiceCheck: '音声チェックから',
+    carefulClaim: '慎重な解釈',
+    carefulClaimBody: 'これは最初の焦点を示すもので、医学的または完全なボーカル診断ではありません。',
+    recapRoutine: '分ルーティン',
+    starterHypothesis: '最初の仮説は次を示しています:',
+    firstCue: '最初のヒント:',
+    freeNow: 'まず無料',
+    freeNowBody: '最初のパーソナルセッション、基本フィードバック、制限付きの毎日チェック。',
+    premiumLater: 'Premium は後で',
+    premiumLaterBody: '無制限セッション、より深い履歴、より多いプラン調整。',
+    focus: 'フォーカス:',
+    stopIfHurts: '痛みがあれば止める',
+  },
+  zhHans: {
+    continue: '继续',
+    sample: '样本',
+    of: '/',
+    actionUnavailable: '将在接入真实音频后可用。',
+    fromAnswers: '根据你的回答',
+    fromVoiceCheck: '根据声音检查',
+    carefulClaim: '谨慎解读',
+    carefulClaimBody: '这只是建议第一个练习重点，不是医学或完整声乐诊断。',
+    recapRoutine: '分钟练习',
+    starterHypothesis: '初始假设指向',
+    firstCue: '第一个提示：',
+    freeNow: '现在免费',
+    freeNowBody: '首次个性化课程、基础反馈和有限的每日检查。',
+    premiumLater: '稍后 Premium',
+    premiumLaterBody: '无限课程、更深入历史记录和更多计划调整。',
+    focus: '重点：',
+    stopIfHurts: '如果疼痛就停止',
+  },
+  zhHant: {
+    continue: '繼續',
+    sample: '樣本',
+    of: '/',
+    actionUnavailable: '將在接入真實音訊後可用。',
+    fromAnswers: '根據你的回答',
+    fromVoiceCheck: '根據聲音檢查',
+    carefulClaim: '謹慎解讀',
+    carefulClaimBody: '這只是建議第一個練習重點，不是醫療或完整聲樂診斷。',
+    recapRoutine: '分鐘練習',
+    starterHypothesis: '初始假設指向',
+    firstCue: '第一個提示：',
+    freeNow: '現在免費',
+    freeNowBody: '首次個人化課程、基本回饋和有限的每日檢查。',
+    premiumLater: '稍後 Premium',
+    premiumLaterBody: '無限課程、更深入歷史紀錄和更多計畫調整。',
+    focus: '重點：',
+    stopIfHurts: '如果疼痛就停止',
+  },
+  hi: {
+    continue: 'जारी रखें',
+    sample: 'सैंपल',
+    of: 'में से',
+    actionUnavailable: 'असली ऑडियो जुड़ने के बाद उपलब्ध होगा.',
+    fromAnswers: 'आपके जवाबों से',
+    fromVoiceCheck: 'वॉइस चेक से',
+    carefulClaim: 'सावधान व्याख्या',
+    carefulClaimBody: 'यह पहला फोकस सुझाता है, यह मेडिकल या पूरा वोकल निदान नहीं है.',
+    recapRoutine: 'मिनट की रूटीन',
+    starterHypothesis: 'शुरुआती अनुमान इशारा करता है',
+    firstCue: 'पहला संकेत:',
+    freeNow: 'अभी मुफ्त',
+    freeNowBody: 'पहला पर्सनल सेशन, बेसिक फीडबैक और सीमित दैनिक चेक.',
+    premiumLater: 'Premium बाद में',
+    premiumLaterBody: 'अनलिमिटेड सेशन, गहरा इतिहास और अधिक प्लान अनुकूलन.',
+    focus: 'फोकस:',
+    stopIfHurts: 'दर्द हो तो रुकें',
+  },
+  ar: {
+    continue: 'متابعة',
+    sample: 'عينة',
+    of: 'من',
+    actionUnavailable: 'سيكون متاحا بعد توصيل الصوت الحقيقي.',
+    fromAnswers: 'من إجاباتك',
+    fromVoiceCheck: 'من فحص الصوت',
+    carefulClaim: 'تفسير حذر',
+    carefulClaimBody: 'هذا يقترح نقطة تركيز أولى، وليس تشخيصا طبيا أو صوتيا كاملا.',
+    recapRoutine: 'دقيقة روتين',
+    starterHypothesis: 'تشير الفرضية الأولى إلى',
+    firstCue: 'النصيحة الأولى:',
+    freeNow: 'مجانا الآن',
+    freeNowBody: 'أول جلسة مخصصة، ملاحظات أساسية، وفحوصات يومية محدودة.',
+    premiumLater: 'Premium لاحقا',
+    premiumLaterBody: 'جلسات غير محدودة، سجل أعمق، وتكييف أكبر للخطة.',
+    focus: 'التركيز:',
+    stopIfHurts: 'توقف إذا شعرت بألم',
+  },
+  id: {
+    continue: 'Lanjut',
+    sample: 'Sampel',
+    of: 'dari',
+    actionUnavailable: 'akan tersedia setelah audio asli terhubung.',
+    fromAnswers: 'Dari jawabanmu',
+    fromVoiceCheck: 'Dari cek suara',
+    carefulClaim: 'Interpretasi hati-hati',
+    carefulClaimBody: 'Ini menyarankan fokus pertama, bukan diagnosis vokal atau medis lengkap.',
+    recapRoutine: 'menit rutinitas',
+    starterHypothesis: 'Hipotesis awal mengarah ke',
+    firstCue: 'Petunjuk pertama:',
+    freeNow: 'Gratis sekarang',
+    freeNowBody: 'Sesi personal pertama, feedback dasar, dan cek harian terbatas.',
+    premiumLater: 'Premium nanti',
+    premiumLaterBody: 'Sesi tanpa batas, riwayat lebih dalam, dan adaptasi rencana lebih banyak.',
+    focus: 'Fokus:',
+    stopIfHurts: 'Berhenti jika terasa sakit',
+  },
+} satisfies Record<Language, Record<string, string>>;
+
+export function answerLabel(value: string, language: Language) {
+  if (language === 'en') {
+    return value.replace(/-/g, ' ');
+  }
+
+  if (language !== 'ko') {
+    return answerTranslations[value]?.[language] ?? value.replace(/-/g, ' ');
+  }
+
+  const labels: Record<string, string> = {
+    tone: '톤 안정',
+    pitch: '음정',
+    range: '음역',
+    confidence: '자신감',
+    habit: '습관',
+    'hate-playback': '녹음 재생 불편',
+    'if-helpful': '도움이 되면 재생 가능',
+    'before-after': '비포/애프터 선호',
+    'metrics-first': '지표 먼저',
+    '5': '5',
+    '10': '10-12',
+    '20': '20',
+    unsure: '미정',
+  };
+
+  return labels[value] ?? value.replace(/-/g, ' ');
+}
+
+export function localizePlan(plan: StarterPlan, language: Language): StarterPlan {
+  if (language === 'en') {
+    return plan;
+  }
+
+  if (language !== 'ko') {
+    return {
+      ...plan,
+      focus: translatePhrase(plan.focus, language),
+      reason: translatePhrase(plan.reason, language),
+      firstSession: translatePhrase(plan.firstSession, language),
+      drills: plan.drills.map((item) => translatePhrase(item, language)),
+      cue: translatePhrase(plan.cue, language),
+      planDays: plan.planDays.map((day) => ({
+        range: translatePhrase(day.range, language),
+        title: translatePhrase(day.title, language),
+        detail: translatePhrase(day.detail, language),
+      })),
+    };
+  }
+
+  const plans: Record<StarterPlan['bucket'], Omit<StarterPlan, 'bucket'>> = {
+    safety: {
+      focus: '부드러운 리셋과 안전',
+      reason: '노래할 때 통증이 있다고 답했기 때문에 첫 플랜은 음역이나 볼륨을 밀어붙이지 않습니다.',
+      firstSession: '5분 편안함 체크',
+      drills: ['부드러운 허밍', '쉬운 숨 내보내기', '아프면 멈추기 체크'],
+      cue: '내일도 다시 할 수 있을 만큼 쉬운 소리만 사용하세요.',
+      planDays: [
+        { range: '1-3일', title: '부드러운 베이스라인', detail: '조용한 허밍과 편안함 체크만 합니다.' },
+        { range: '4-9일', title: '안전한 소리 반복', detail: '편안하게 유지되는 소리만 계속합니다.' },
+        { range: '10-14일', title: '다음 도움 결정', detail: '통증이 남아 있으면 기록을 전문가에게 가져가세요.' },
+      ],
+    },
+    tension: {
+      focus: '음역 전에 쉬운 조율',
+      reason: '높은 음이나 조이는 소리는 먼저 더 부드러운 조율이 필요해 보입니다.',
+      firstSession: '12분 조율 베이스',
+      drills: ['부드러운 허밍', '작은 음 이동', '편안함 체크'],
+      cue: '먼저 더 작은 소리를 사용하세요. 음역은 힘으로 밀지 않을 때 더 잘 자랍니다.',
+      planDays: [
+        { range: '1-3일', title: '편한 중간 음역', detail: '높은 음을 쫓지 않고 쉽게 유지합니다.' },
+        { range: '4-9일', title: '작은 움직임', detail: '편안함을 확인하면서 작은 음 이동을 추가합니다.' },
+        { range: '10-14일', title: '첫 한계 확인', detail: '중간 음역이 부드러울 때만 난이도를 올립니다.' },
+      ],
+    },
+    confidence: {
+      focus: '사적인 작은 성공',
+      reason: '재생 부담을 보호하면서도 테이크 사이의 변화를 볼 수 있게 시작합니다.',
+      firstSession: '5분 사적 베이스라인',
+      drills: ['짧은 허밍', '부드러운 아 유지', '선택적 재생 1회'],
+      cue: '먼저 작은 테이크를 끝내세요. 오늘은 듣는 것을 선택으로 둬도 됩니다.',
+      planDays: [
+        { range: '1-3일', title: '녹음을 견딜 수 있게 만들기', detail: '짧은 과제, 갑작스러운 재생 없음.' },
+        { range: '4-9일', title: '부드럽게 비교', detail: '도움이 될 때만 비포/애프터를 사용합니다.' },
+        { range: '10-14일', title: '신뢰 만들기', detail: '가장 쉬운 성공을 익숙해질 때까지 반복합니다.' },
+      ],
+    },
+    pitch: {
+      focus: '한 음 찾고 유지하기',
+      reason: '답변은 호흡 붕괴보다 음정 매칭 쪽을 더 가리킵니다.',
+      firstSession: '12분 음정 맞추기',
+      drills: ['기준음', '허밍에서 아로 열기', '두 음 에코'],
+      cue: '먼저 허밍으로 음을 잡고, 같은 음을 유지한 채 아로 여세요.',
+      planDays: [
+        { range: '1-3일', title: '한 음 고정', detail: '편한 기준음을 맞추고 유지합니다.' },
+        { range: '4-9일', title: '서두르지 않고 반복', detail: '넘어가기 전에 같은 목표를 두 번 시도합니다.' },
+        { range: '10-14일', title: '작은 움직임 추가', detail: '두 음, 세 음 패턴을 천천히 따라 합니다.' },
+      ],
+    },
+    air: {
+      focus: '끝부분의 고른 숨',
+      reason: '끝에서 약해지거나 숨 섞이고 흔들리는 소리는 고르지 않은 끝처리에서 시작되는 경우가 많습니다.',
+      firstSession: '12분 기초 루프',
+      drills: ['고른 히스', '부드러운 아 유지', '두 음 연결'],
+      cue: '끝까지 고르게 유지할 수 있도록 소리를 더 작게 만들어보세요.',
+      planDays: [
+        { range: '1-3일', title: '베이스라인 루프', detail: '끝까지 고르게 남는 가장 쉬운 소리를 찾습니다.' },
+        { range: '4-9일', title: '움직인 것 반복', detail: '가장 잘 된 드릴을 유지하고 작은 확장을 더합니다.' },
+        { range: '10-14일', title: '첫 발전 증거', detail: '첫 클립과 가장 최근 테이크를 비교합니다.' },
+      ],
+    },
+    mixed: {
+      focus: '기초 믹스',
+      reason: '아직 하나의 신호가 지배적이지 않아 호흡, 음정, 조율을 조금씩 확인합니다.',
+      firstSession: '12분 기초 믹스',
+      drills: ['고른 히스', '한 음 맞추기', '세 음 에코'],
+      cue: 'VoiceFix가 이전 테이크와 비교할 수 있도록 같은 작은 과제를 한 번 다시 해보세요.',
+      planDays: [
+        { range: '1-3일', title: '기초 샘플링', detail: '호흡, 음정, 에코를 하나씩 시도합니다.' },
+        { range: '4-9일', title: '걸리는 지점 찾기', detail: '반복 테이크가 가장 강한 패턴을 드러내게 합니다.' },
+        { range: '10-14일', title: '방향 선택', detail: '가장 분명한 신호 쪽으로 플랜을 기울입니다.' },
+      ],
+    },
+  };
+
+  return {
+    bucket: plan.bucket,
+    ...plans[plan.bucket],
+  };
+}

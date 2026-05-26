@@ -28,6 +28,12 @@
     "plugins": [
       "expo-router",
       [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow VoiceFix to record short practice takes for private feedback and retry comparison."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

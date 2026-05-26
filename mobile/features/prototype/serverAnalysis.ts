@@ -1,0 +1,118 @@
+import Constants from 'expo-constants';
+
+import type { MainAppLanguage } from './localization';
+
+export type MonthOneDrillId = 'soft_hiss' | 'gentle_hum' | 'mmm_resonance' | 'hum_to_ah' | 'short_tone' | 'resonance_vowel';
+export type AnalysisQuality = 'usable' | 'too_short' | 'too_quiet' | 'clipped' | 'noisy' | 'unsupported';
+
+export type MonthOneMetrics = {
+  durationSec: number;
+  rmsDb: number;
+  loudnessSteadiness: number;
+  fadeAmount: number;
+  clippingRatio: number;
+  silenceRatio: number;
+  pitchStability: number | null;
+  spectralCentroid: number;
+  brightness: number;
+  harmonicClarity: number;
+  onsetAbruptness: number;
+  burstRatio: number;
+  resonanceScore: number;
+  resonanceStability: number;
+  forwardEnergyRatio: number;
+  throatEnergyRatio: number;
+  humToVowelContinuity: number | null;
+};
+
+export type MonthOneAnalysisResponse = {
+  drillId: MonthOneDrillId;
+  quality: AnalysisQuality;
+  metrics: MonthOneMetrics;
+  feedback: {
+    whatWeHeard: string;
+    whatItOftenMeans: string;
+    oneThingToTry: string;
+    retryGoal: string;
+  };
+  comparison: {
+    summary: string;
+    improved: boolean;
+    changedMetrics: Record<string, number>;
+  } | null;
+  safetyFlags: string[];
+};
+
+type AnalyzeTakeInput = {
+  uri: string;
+  drillId: MonthOneDrillId;
+  language: MainAppLanguage;
+  takeKind: 'first' | 'retry';
+  previousMetrics?: MonthOneMetrics;
+};
+
+const DEFAULT_SERVER_URL = 'http://127.0.0.1:8000';
+
+export function monthOneDrillForWeek(weekNumber: number): MonthOneDrillId | null {
+  if (weekNumber === 1) {
+    return 'soft_hiss';
+  }
+
+  if (weekNumber === 2) {
+    return 'gentle_hum';
+  }
+
+  if (weekNumber === 3) {
+    return 'mmm_resonance';
+  }
+
+  if (weekNumber === 4) {
+    return 'hum_to_ah';
+  }
+
+  return null;
+}
+
+export async function analyzeMonthOneTake(input: AnalyzeTakeInput): Promise<MonthOneAnalysisResponse> {
+  const formData = new FormData();
+  formData.append('audio', {
+    uri: input.uri,
+    name: `${input.drillId}-${input.takeKind}.m4a`,
+    type: 'audio/m4a',
+  } as unknown as Blob);
+  formData.append('drill_id', input.drillId);
+  formData.append('language', input.language);
+  formData.append('take_kind', input.takeKind);
+
+  if (input.previousMetrics) {
+    formData.append('previous_metrics_json', JSON.stringify(input.previousMetrics));
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 9000);
+
+  try {
+    const response = await fetch(`${getAnalysisServerUrl()}/api/month-one/analyze`, {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Analysis server returned ${response.status}`);
+    }
+
+    return (await response.json()) as MonthOneAnalysisResponse;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function getAnalysisServerUrl() {
+  const configured =
+    process.env.EXPO_PUBLIC_ANALYSIS_SERVER_URL ??
+    (Constants.expoConfig?.extra?.analysisServerUrl as string | undefined) ??
+    DEFAULT_SERVER_URL;
+
+  return configured.replace(/\/$/, '');
+}
