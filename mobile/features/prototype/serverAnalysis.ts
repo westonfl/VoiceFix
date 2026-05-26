@@ -43,6 +43,17 @@ export type MonthOneAnalysisResponse = {
   safetyFlags: string[];
 };
 
+export class AnalysisServerError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+    readonly detail?: unknown,
+  ) {
+    super(message);
+    this.name = 'AnalysisServerError';
+  }
+}
+
 type AnalyzeTakeInput = {
   uri: string;
   drillId: MonthOneDrillId;
@@ -97,7 +108,14 @@ export async function analyzeMonthOneTake(input: AnalyzeTakeInput): Promise<Mont
     });
 
     if (!response.ok) {
-      throw new Error(`Analysis server returned ${response.status}`);
+      let detail: unknown;
+      try {
+        detail = await response.json();
+      } catch {
+        detail = await response.text();
+      }
+
+      throw new AnalysisServerError(`Analysis server returned ${response.status}`, response.status, detail);
     }
 
     return (await response.json()) as MonthOneAnalysisResponse;
@@ -105,4 +123,3 @@ export async function analyzeMonthOneTake(input: AnalyzeTakeInput): Promise<Mont
     clearTimeout(timeout);
   }
 }
-

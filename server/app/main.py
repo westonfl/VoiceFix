@@ -3,8 +3,10 @@ import logging
 import tempfile
 from typing import Annotated
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .analyzer import analyze_samples
 from .audio import AudioDecodeError, decode_audio
@@ -13,6 +15,7 @@ from .models import DrillId, Language, MonthOneAnalysisResponse, TakeKind
 
 logger = logging.getLogger("uvicorn.error")
 app = FastAPI(title="VoiceFix Analysis Server", version="0.1.0")
+SUPPORTED_DRILLS = ["soft_hiss", "gentle_hum", "mmm_resonance", "hum_to_ah", "short_tone", "resonance_vowel"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,9 +26,20 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    logger.warning("validation_error path=%s errors=%s", request.url.path, exc.errors())
+    return JSONResponse(status_code=422, content={"detail": exc.errors(), "supportedDrills": SUPPORTED_DRILLS})
+
+
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "service": "voicefix-analysis-server"}
+def health() -> dict[str, object]:
+    return {
+        "status": "ok",
+        "service": "voicefix-analysis-server",
+        "version": app.version,
+        "supportedDrills": SUPPORTED_DRILLS,
+    }
 
 
 @app.post("/api/month-one/analyze", response_model=MonthOneAnalysisResponse)

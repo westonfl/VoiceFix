@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { VoiceFixTheme as theme } from '@/constants/theme';
 import { displayPreferenceValue, mainAppLanguageOptions, mainAppText } from '@/features/prototype/localization';
-import { analyzeMonthOneTake } from '@/features/prototype/serverAnalysis';
+import { AnalysisServerError, analyzeMonthOneTake } from '@/features/prototype/serverAnalysis';
 import { usePrototype } from '@/features/prototype/state';
 
 export default function SettingsScreen() {
@@ -43,8 +43,12 @@ export default function SettingsScreen() {
           analysis.feedback.oneThingToTry,
         ].join('\n\n'),
       );
-    } catch {
-      Alert.alert(text.settings.analyzeAudioFailedTitle, text.settings.analyzeAudioFailedBody);
+    } catch (error) {
+      const detail =
+        error instanceof AnalysisServerError
+          ? `\n\n${error.message}\n${JSON.stringify(error.detail, null, 2).slice(0, 700)}`
+          : '';
+      Alert.alert(text.settings.analyzeAudioFailedTitle, `${text.settings.analyzeAudioFailedBody}${detail}`);
     }
   }
 
