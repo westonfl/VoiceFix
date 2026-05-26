@@ -1,5 +1,6 @@
 from pathlib import Path
 import logging
+import shutil
 import tempfile
 from typing import Annotated
 
@@ -7,6 +8,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .analyzer import analyze_samples
 from .audio import AudioDecodeError, decode_audio
@@ -26,10 +28,33 @@ app.add_middleware(
 )
 
 
+def json_response_with_cors(status_code: int, content: dict[str, object]) -> JSONResponse:
+    response = JSONResponse(status_code=status_code, content=content)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     logger.warning("validation_error path=%s errors=%s", request.url.path, exc.errors())
-    return JSONResponse(status_code=422, content={"detail": exc.errors(), "supportedDrills": SUPPORTED_DRILLS})
+    return json_response_with_cors(status_code=422, content={"detail": exc.errors(), "supportedDrills": SUPPORTED_DRILLS})
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    logger.warning("http_error path=%s status=%s detail=%s", request.url.path, exc.status_code, exc.detail)
+    return json_response_with_cors(status_code=exc.status_code, content={"detail": exc.detail, "supportedDrills": SUPPORTED_DRILLS})
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("server_error path=%s", request.url.path)
+    return json_response_with_cors(
+        status_code=500,
+        content={"detail": "Internal server error. Check Railway logs for server_error.", "supportedDrills": SUPPORTED_DRILLS},
+    )
 
 
 @app.get("/health")
@@ -39,6 +64,7 @@ def health() -> dict[str, object]:
         "service": "voicefix-analysis-server",
         "version": app.version,
         "supportedDrills": SUPPORTED_DRILLS,
+        "ffmpegAvailable": shutil.which("ffmpeg") is not None,
     }
 
 

@@ -3,9 +3,9 @@
   "packages": {
     "python": "3.11"
   },
-  "buildAptPackages": ["libsndfile1"],
+  "buildAptPackages": ["ffmpeg", "libsndfile1"],
   "deploy": {
     "startCommand": "uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}",
-    "aptPackages": ["libsndfile1"]
+    "aptPackages": ["ffmpeg", "libsndfile1"]
   }
 }
