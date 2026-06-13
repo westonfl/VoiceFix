@@ -37,8 +37,7 @@ type TodayExerciseCard = {
   icon: ComponentProps<typeof MaterialIcons>['name'];
 };
 
-const DAILY_ACTIVE_TARGET_MS = 10 * 60 * 1000;
-const RECORDED_TARGET_PER_EXERCISE_MS = 60 * 1000;
+const DAILY_RECORDED_TARGET_MS = 10 * 60 * 1000;
 const SPACE = 5;
 
 function orderExercises(exercises: string[], savedOrder?: string[]) {
@@ -72,6 +71,7 @@ export default function TodayScreen() {
   const [completedRecordedMs, setCompletedRecordedMs] = useState(0);
   const [selectedWeekNumber, setSelectedWeekNumber] = useState(state.currentWeekNumber);
   const goalFade = useRef(new Animated.Value(0)).current;
+  const recordingStartedAtRef = useRef<number | null>(null);
   const displayedWeek = getWeek(selectedWeekNumber);
   const todaySession = displayedWeek.dailySessions[state.currentDayNumber - 1] ?? displayedWeek.dailySessions[0];
   const text = mainAppText[state.language];
@@ -99,12 +99,12 @@ export default function TodayScreen() {
   const pendingCompletedCount = completedExerciseIds.includes(currentExercise?.id ?? '') || !currentExercisePairComplete ? 0 : 1;
   const dailyGoalCompleted = state.completedToday ? dailyGoalTotal : Math.min(dailyGoalTotal, completedExerciseIds.length + pendingCompletedCount);
   const savedTodayClip = state.savedClips.find((clip) => clip.weekNumber === displayedWeek.weekNumber && clip.dayNumber === state.currentDayNumber);
-  const displayedGoalActiveMs = savedTodayClip?.activeTrainingMs ?? activeTrainingMs;
   const currentRecordedMs = (firstTake?.durationMs ?? 0) + (retryTake?.durationMs ?? 0);
   const recordedPracticeMs = completedRecordedMs + (completedExerciseIds.includes(currentExercise?.id ?? '') ? 0 : currentRecordedMs);
-  const recordedTargetMs = Math.max(RECORDED_TARGET_PER_EXERCISE_MS, dailyGoalTotal * RECORDED_TARGET_PER_EXERCISE_MS);
+  const displayedGoalRecordedMs = savedTodayClip?.recordedPracticeMs ?? recordedPracticeMs;
   const allExercisesRecorded = dailyGoalCompleted >= dailyGoalTotal && dailyGoalTotal > 0;
-  const dailyCompletionReady = allExercisesRecorded && recordedPracticeMs >= recordedTargetMs && activeTrainingMs >= DAILY_ACTIVE_TARGET_MS;
+  const allGoalTargetsAchieved = state.completedToday || (allExercisesRecorded && displayedGoalRecordedMs >= DAILY_RECORDED_TARGET_MS);
+  const dailyCompletionReady = allExercisesRecorded && recordedPracticeMs >= DAILY_RECORDED_TARGET_MS;
   const fallbackFeedback = useMemo(() => buildMvpFeedback(firstTake ?? { durationMs: 0 }, state.language), [firstTake, state.language]);
   const feedback = firstAnalysis
     ? {
@@ -216,15 +216,18 @@ export default function TodayScreen() {
       setActiveTake(take);
       await audioRecorder.prepareToRecordAsync();
       audioRecorder.record();
+      recordingStartedAtRef.current = Date.now();
     } catch {
       setActiveTake(null);
+      recordingStartedAtRef.current = null;
       setRecordingError(text.today.recordStartFailed);
     }
   }
 
   async function stopRecording(take: 'first' | 'retry') {
     try {
-      const durationMs = recorderState.durationMillis;
+      const measuredDurationMs = recordingStartedAtRef.current ? Date.now() - recordingStartedAtRef.current : 0;
+      const durationMs = Math.max(recorderState.durationMillis, measuredDurationMs);
       await audioRecorder.stop();
       const recordedTake = {
         durationMs,
@@ -247,6 +250,7 @@ export default function TodayScreen() {
       setRecordingError(text.today.recordSaveFailed);
     } finally {
       setActiveTake(null);
+      recordingStartedAtRef.current = null;
     }
   }
 
@@ -315,15 +319,13 @@ export default function TodayScreen() {
     }
 
     const allNextExercisesRecorded = nextCompletedIds.length >= dailyGoalTotal && dailyGoalTotal > 0;
-    const nextDailyCompletionReady = allNextExercisesRecorded && nextRecordedPracticeMs >= recordedTargetMs && activeTrainingMs >= DAILY_ACTIVE_TARGET_MS;
+    const nextDailyCompletionReady = allNextExercisesRecorded && nextRecordedPracticeMs >= DAILY_RECORDED_TARGET_MS;
 
     if (!nextDailyCompletionReady) {
-      const missingActiveMs = Math.max(0, DAILY_ACTIVE_TARGET_MS - activeTrainingMs);
-      const missingRecordedMs = Math.max(0, recordedTargetMs - nextRecordedPracticeMs);
+      const missingRecordedMs = Math.max(0, DAILY_RECORDED_TARGET_MS - nextRecordedPracticeMs);
       const pieces = [
         !allNextExercisesRecorded ? state.language === 'ko' ? '모든 훈련의 첫 테이크와 재시도를 녹음해야 합니다.' : 'Record first take and retry for every exercise.' : null,
         missingRecordedMs > 0 ? state.language === 'ko' ? `녹음 시간이 ${formatTimer(missingRecordedMs)} 더 필요합니다.` : `Record ${formatTimer(missingRecordedMs)} more audio.` : null,
-        missingActiveMs > 0 ? state.language === 'ko' ? `활성 훈련 시간이 ${formatTimer(missingActiveMs)} 더 필요합니다.` : `Stay active ${formatTimer(missingActiveMs)} longer.` : null,
       ].filter(Boolean);
       setCompletionMessage(pieces.join(' '));
       return;
@@ -508,13 +510,12 @@ export default function TodayScreen() {
               </View>
               <View style={styles.panel}>
                 <Text style={styles.panelTitle}>{state.language === 'ko' ? '오늘 훈련 증거' : 'Daily training proof'}</Text>
-                <Metric value={formatTimer(activeTrainingMs)} label={state.language === 'ko' ? '활성 시간' : 'active time'} />
                 <Metric value={formatTimer(recordedPracticeMs)} label={state.language === 'ko' ? '녹음 시간' : 'recorded audio'} />
                 <Metric value={currentExercisePairComplete ? '2/2' : firstTake ? '1/2' : '0/2'} label={state.language === 'ko' ? '테이크' : 'takes'} />
                 <Text style={styles.analysisNote}>
                   {state.language === 'ko'
-                    ? `완료 기준: 활성 훈련 ${formatTimer(DAILY_ACTIVE_TARGET_MS)}, 녹음 ${formatTimer(recordedTargetMs)}, 첫 테이크와 재시도.`
-                    : `Completion rule: ${formatTimer(DAILY_ACTIVE_TARGET_MS)} active training, ${formatTimer(recordedTargetMs)} recorded audio, first take and retry.`}
+                    ? `완료 기준: 오늘 녹음 ${formatTimer(DAILY_RECORDED_TARGET_MS)}, 모든 훈련의 첫 테이크와 재시도.`
+                    : `Completion rule: ${formatTimer(DAILY_RECORDED_TARGET_MS)} recorded audio today, first take and retry for every exercise.`}
                 </Text>
                 {completionMessage ? <Text style={styles.errorText}>{completionMessage}</Text> : null}
               </View>
@@ -541,7 +542,7 @@ export default function TodayScreen() {
               accessibilityLabel={state.language === 'ko' ? '오늘 목표 보기' : 'Show daily goal'}
               onPress={openGoalModal}
               style={({ pressed }) => [styles.goalIconButton, pressed && styles.goalIconButtonPressed]}>
-              <MaterialIcons name={state.completedToday ? 'check-circle' : 'track-changes'} size={24} color={state.completedToday ? theme.success : theme.primaryBright} />
+              <MaterialIcons name={allGoalTargetsAchieved ? 'check-circle' : 'track-changes'} size={24} color={allGoalTargetsAchieved ? theme.success : theme.primaryBright} />
             </Pressable>
           </View>
           <View style={styles.forYouLine}>
@@ -583,8 +584,8 @@ export default function TodayScreen() {
         visible={goalModalVisible}
         completed={dailyGoalCompleted}
         total={dailyGoalTotal}
-        activeMs={displayedGoalActiveMs}
-        activeTargetMs={DAILY_ACTIVE_TARGET_MS}
+        activeMs={displayedGoalRecordedMs}
+        activeTargetMs={DAILY_RECORDED_TARGET_MS}
         language={state.language}
         fade={goalFade}
         onClose={closeGoalModal}
@@ -786,7 +787,7 @@ function DailyGoalCard({
 }) {
   const timeProgress = Math.min(1, activeMs / activeTargetMs);
   const title = language === 'ko' ? '오늘 목표' : 'Daily Goal';
-  const timeLabel = language === 'ko' ? '훈련 시간' : 'Training time';
+  const timeLabel = language === 'ko' ? '녹음 시간' : 'Recorded audio';
   const exerciseLabel = language === 'ko' ? '훈련' : 'Exercises';
   const timeRingColor = timeProgress >= 1 ? 'rgba(100, 217, 154, 0.66)' : `rgba(50, 230, 226, ${0.22 + timeProgress * 0.5})`;
 
@@ -1216,8 +1217,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(184, 199, 211, 0.12)',
     borderRadius: 8,
     borderWidth: 1,
-    gap: SPACE,
-    padding: SPACE * 2,
+    gap: SPACE * 4,
+    minHeight: 250,
+    paddingHorizontal: SPACE * 4,
+    paddingVertical: SPACE * 5,
   },
   goalHeader: {
     alignItems: 'center',
@@ -1229,24 +1232,25 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     alignSelf: 'stretch',
     flexDirection: 'row',
-    gap: SPACE,
+    gap: SPACE * 3,
     justifyContent: 'center',
+    paddingTop: SPACE * 2,
   },
   goalMeter: {
     alignItems: 'center',
     flex: 1,
-    gap: SPACE,
+    gap: SPACE * 3,
     minWidth: 0,
   },
   goalRing: {
     alignItems: 'center',
     borderColor: 'rgba(184, 199, 211, 0.22)',
-    borderRadius: 41,
+    borderRadius: 48,
     borderWidth: 8,
     flexDirection: 'row',
-    height: 82,
+    height: 96,
     justifyContent: 'center',
-    width: 82,
+    width: 96,
   },
   goalRingComplete: {
     borderColor: 'rgba(100, 217, 154, 0.66)',
