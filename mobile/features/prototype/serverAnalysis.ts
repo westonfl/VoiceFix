@@ -2,7 +2,14 @@ import { getAnalysisServerUrl } from '@/constants/env';
 
 import type { MainAppLanguage } from './localization';
 
-export type MonthOneDrillId = 'soft_hiss' | 'gentle_hum' | 'mmm_resonance' | 'hum_to_ah' | 'short_tone' | 'resonance_vowel';
+export type MonthOneDrillId =
+  | 'sustained_hiss'
+  | 'gentle_hum'
+  | 'soft_hum_start'
+  | 'mmm_resonance'
+  | 'fah_vah_resonance'
+  | 'hum_to_ah'
+  | 'short_tone_hold';
 export type AnalysisQuality = 'usable' | 'too_short' | 'too_quiet' | 'clipped' | 'noisy' | 'unsupported';
 
 export type MonthOneMetrics = {
@@ -64,7 +71,7 @@ type AnalyzeTakeInput = {
 
 export function monthOneDrillForWeek(weekNumber: number): MonthOneDrillId | null {
   if (weekNumber === 1) {
-    return 'soft_hiss';
+    return 'sustained_hiss';
   }
 
   if (weekNumber === 2) {

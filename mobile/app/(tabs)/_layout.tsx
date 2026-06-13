@@ -7,15 +7,11 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { mainAppText } from '@/features/prototype/localization';
-import { PrototypeProvider, usePrototype } from '@/features/prototype/state';
+import { usePrototype } from '@/features/prototype/state';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
-  return (
-    <PrototypeProvider>
-      <PrototypeTabs />
-    </PrototypeProvider>
-  );
+  return <PrototypeTabs />;
 }
 
 function PrototypeTabs() {

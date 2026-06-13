@@ -75,7 +75,7 @@ def test_fading_hiss_feedback_mentions_ending():
     samples = rng.normal(0, 0.12, SAMPLE_RATE * 4).astype(np.float32)
     samples *= np.linspace(1.0, 0.12, samples.size).astype(np.float32)
 
-    response = analyze_samples(samples, "soft_hiss", "en")
+    response = analyze_samples(samples, "sustained_hiss", "en")
 
     assert response.quality == "usable"
     assert "end" in response.feedback.retryGoal.lower() or "faded" in response.feedback.whatWeHeard.lower()

@@ -22,6 +22,7 @@ export function OnboardingFlow({ onComplete }: { onComplete?: (answers: Onboardi
   const baseScreen = onboardingScreens[stepIndex];
   const screen = useMemo(() => localizeScreen(baseScreen, language), [baseScreen, language]);
   const plan = useMemo(() => localizePlan(buildStarterPlan(answers), language), [answers, language]);
+  const text = uiText[language];
   const progress = (stepIndex + 1) / onboardingScreens.length;
   const recordingComplete = Boolean(completedRecordings[screen.id]);
   const showProgressHeader = stepIndex > 0;
@@ -122,7 +123,7 @@ export function OnboardingFlow({ onComplete }: { onComplete?: (answers: Onboardi
               <View style={styles.progressMeta}>
                 <Text style={styles.stepId}>{screen.id}</Text>
                 <Text style={styles.stepTitle}>
-                  {stepIndex + 1} of {onboardingScreens.length} - {screen.shortTitle}
+                  {stepIndex + 1} {text.of} {onboardingScreens.length} - {screen.shortTitle}
                 </Text>
               </View>
               <View style={styles.progressRail}>

@@ -7,17 +7,17 @@ import {
   useAudioRecorderState,
 } from 'expo-audio';
 import type { ComponentProps } from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Animated, AppState, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { VoiceFixTheme as theme } from '@/constants/theme';
 import { OnboardingFlow } from '@/features/onboarding/OnboardingFlow';
 import { SignalWave } from '@/features/onboarding/components';
 import { buildMvpFeedback, compareTakes, formatDuration } from '@/features/prototype/analysis';
-import { getPhaseLabel } from '@/features/prototype/curriculum';
-import { displayPhase, displayPreferenceValue, displaySessionText, displayWeek, mainAppText } from '@/features/prototype/localization';
-import { analyzeMonthOneTake, monthOneDrillForWeek, type MonthOneAnalysisResponse } from '@/features/prototype/serverAnalysis';
+import { curriculum, getWeek, TOTAL_JOURNEY_DAYS, type CurriculumExercise } from '@/features/prototype/curriculum';
+import { displaySessionText, displayWeek, mainAppText } from '@/features/prototype/localization';
+import { analyzeMonthOneTake, type MonthOneAnalysisResponse } from '@/features/prototype/serverAnalysis';
 import { usePrototype } from '@/features/prototype/state';
 
 type SessionStep = 'intro' | 'record' | 'feedback' | 'retry' | 'summary';
@@ -26,8 +26,31 @@ type RecordedTake = {
   durationMs: number;
 };
 
+type TodayExerciseCard = {
+  id: string;
+  title: string;
+  detail: string;
+  goal: string;
+  instruction: string;
+  analysisDrillId: CurriculumExercise['analysisDrillId'];
+  visual: CurriculumExercise['visual'];
+  icon: ComponentProps<typeof MaterialIcons>['name'];
+};
+
+const DAILY_ACTIVE_TARGET_MS = 10 * 60 * 1000;
+const RECORDED_TARGET_PER_EXERCISE_MS = 60 * 1000;
+const SPACE = 5;
+
+function orderExercises(exercises: string[], savedOrder?: string[]) {
+  const validExercises = new Set(exercises);
+  const ordered = savedOrder?.filter((exercise) => validExercises.has(exercise)) ?? [];
+  const missing = exercises.filter((exercise) => !ordered.includes(exercise));
+
+  return [...ordered, ...missing];
+}
+
 export default function TodayScreen() {
-  const { state, currentWeek, isHydrated, completeOnboarding, completeSession } = usePrototype();
+  const { state, isHydrated, completeOnboarding, completeSession, reorderWeekExercise } = usePrototype();
   const audioRecorder = useAudioRecorder(RecordingPresets.LOW_QUALITY);
   const recorderState = useAudioRecorderState(audioRecorder);
   const [sessionStep, setSessionStep] = useState<SessionStep>('intro');
@@ -41,9 +64,47 @@ export default function TodayScreen() {
   const [retryAnalysis, setRetryAnalysis] = useState<MonthOneAnalysisResponse | null>(null);
   const [analysisPending, setAnalysisPending] = useState(false);
   const [analysisSource, setAnalysisSource] = useState<'server' | 'fallback' | null>(null);
-  const todaySession = currentWeek.dailySessions[state.currentDayNumber - 1] ?? currentWeek.dailySessions[0];
+  const [goalModalVisible, setGoalModalVisible] = useState(false);
+  const [activeTrainingMs, setActiveTrainingMs] = useState(0);
+  const [completionMessage, setCompletionMessage] = useState<string | null>(null);
+  const [activeExerciseIndex, setActiveExerciseIndex] = useState(0);
+  const [completedExerciseIds, setCompletedExerciseIds] = useState<string[]>([]);
+  const [completedRecordedMs, setCompletedRecordedMs] = useState(0);
+  const [selectedWeekNumber, setSelectedWeekNumber] = useState(state.currentWeekNumber);
+  const goalFade = useRef(new Animated.Value(0)).current;
+  const displayedWeek = getWeek(selectedWeekNumber);
+  const todaySession = displayedWeek.dailySessions[state.currentDayNumber - 1] ?? displayedWeek.dailySessions[0];
   const text = mainAppText[state.language];
-  const displayCurrentWeek = displayWeek(currentWeek, state.language);
+  const displayCurrentWeek = displayWeek(displayedWeek, state.language);
+  const forYouTitle = state.language === 'ko' ? '추천 훈련' : 'For You';
+  const forYouSubtitle = state.language === 'ko' ? '오늘 목표에 맞춘 개인 훈련 카드' : 'Personalized picks for your singing goal';
+  const selectableWeeks = curriculum.filter((week) => week.exercises.length > 0);
+  const orderedExerciseIds = orderExercises(displayedWeek.exercises.map((exercise) => exercise.id), state.exerciseOrdersByWeek[`${displayedWeek.weekNumber}`]);
+  const orderedExerciseUnits = orderedExerciseIds
+    .map((id) => displayedWeek.exercises.find((exercise) => exercise.id === id))
+    .filter((exercise): exercise is CurriculumExercise => Boolean(exercise));
+  const todayExerciseCards: TodayExerciseCard[] = orderedExerciseUnits.map((exercise) => ({
+    id: exercise.id,
+    title: displaySessionText(exercise.title, state.language),
+    detail: displaySessionText(exercise.instruction, state.language),
+    goal: displaySessionText(exercise.goal, state.language),
+    instruction: displaySessionText(exercise.instruction, state.language),
+    analysisDrillId: exercise.analysisDrillId,
+    visual: exercise.visual,
+    icon: getExerciseIcon(exercise),
+  }));
+  const currentExercise = todayExerciseCards[activeExerciseIndex] ?? todayExerciseCards[0];
+  const dailyGoalTotal = todayExerciseCards.length;
+  const currentExercisePairComplete = Boolean(firstTake && retryTake);
+  const pendingCompletedCount = completedExerciseIds.includes(currentExercise?.id ?? '') || !currentExercisePairComplete ? 0 : 1;
+  const dailyGoalCompleted = state.completedToday ? dailyGoalTotal : Math.min(dailyGoalTotal, completedExerciseIds.length + pendingCompletedCount);
+  const savedTodayClip = state.savedClips.find((clip) => clip.weekNumber === displayedWeek.weekNumber && clip.dayNumber === state.currentDayNumber);
+  const displayedGoalActiveMs = savedTodayClip?.activeTrainingMs ?? activeTrainingMs;
+  const currentRecordedMs = (firstTake?.durationMs ?? 0) + (retryTake?.durationMs ?? 0);
+  const recordedPracticeMs = completedRecordedMs + (completedExerciseIds.includes(currentExercise?.id ?? '') ? 0 : currentRecordedMs);
+  const recordedTargetMs = Math.max(RECORDED_TARGET_PER_EXERCISE_MS, dailyGoalTotal * RECORDED_TARGET_PER_EXERCISE_MS);
+  const allExercisesRecorded = dailyGoalCompleted >= dailyGoalTotal && dailyGoalTotal > 0;
+  const dailyCompletionReady = allExercisesRecorded && recordedPracticeMs >= recordedTargetMs && activeTrainingMs >= DAILY_ACTIVE_TARGET_MS;
   const fallbackFeedback = useMemo(() => buildMvpFeedback(firstTake ?? { durationMs: 0 }, state.language), [firstTake, state.language]);
   const feedback = firstAnalysis
     ? {
@@ -52,7 +113,7 @@ export default function TodayScreen() {
         cue: firstAnalysis.feedback.oneThingToTry,
       }
     : fallbackFeedback;
-  const monthOneDrillId = monthOneDrillForWeek(currentWeek.weekNumber);
+  const monthOneDrillId = currentExercise?.analysisDrillId ?? todaySession.analysisDrillId;
 
   useEffect(() => {
     if (!state.onboardingComplete) {
@@ -77,6 +138,36 @@ export default function TodayScreen() {
     });
   }, [state.onboardingComplete, text.today.micSetupFailed]);
 
+  useEffect(() => {
+    setSelectedWeekNumber(state.currentWeekNumber);
+  }, [state.currentWeekNumber]);
+
+  useEffect(() => {
+    if (!sessionOpen) {
+      return;
+    }
+
+    let lastTick = Date.now();
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      lastTick = Date.now();
+      if (nextState !== 'active') {
+        setCompletionMessage(null);
+      }
+    });
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (AppState.currentState === 'active') {
+        setActiveTrainingMs((current) => current + now - lastTick);
+      }
+      lastTick = now;
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+      subscription.remove();
+    };
+  }, [sessionOpen]);
+
   if (!isHydrated) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -90,6 +181,28 @@ export default function TodayScreen() {
 
   if (!state.onboardingComplete) {
     return <OnboardingFlow onComplete={completeOnboarding} />;
+  }
+
+  function openGoalModal() {
+    setGoalModalVisible(true);
+    goalFade.setValue(0);
+    Animated.timing(goalFade, {
+      duration: 180,
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  }
+
+  function closeGoalModal() {
+    Animated.timing(goalFade, {
+      duration: 140,
+      toValue: 0,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        setGoalModalVisible(false);
+      }
+    });
   }
 
   async function startRecording(take: 'first' | 'retry') {
@@ -127,20 +240,8 @@ export default function TodayScreen() {
         void analyzeFirstTake(recordedTake);
       } else {
         setRetryTake(recordedTake);
-        const retryServerAnalysis = await analyzeRetryTake(recordedTake);
-        const comparisonText = retryServerAnalysis?.comparison?.summary ?? compareTakes(firstTake ?? { durationMs: 0 }, recordedTake, state.language);
+        await analyzeRetryTake(recordedTake);
         setSessionStep('summary');
-        completeSession({
-          title: `${currentWeek.title} - ${todaySession.role}`,
-          firstTakeUri: firstTake?.uri,
-          retryTakeUri: recordedTake.uri,
-          firstDurationMs: firstTake?.durationMs ?? 0,
-          retryDurationMs: recordedTake.durationMs,
-          observation: feedback.observation,
-          comparison: comparisonText,
-          createdAt: new Date().toISOString(),
-          analysisMetrics: retryServerAnalysis?.metrics ?? firstAnalysis?.metrics,
-        });
       }
     } catch {
       setRecordingError(text.today.recordSaveFailed);
@@ -149,8 +250,106 @@ export default function TodayScreen() {
     }
   }
 
+  function startTrainingSession() {
+    setSessionOpen(true);
+    setSessionStep('intro');
+    setActiveExerciseIndex(0);
+    setCompletedExerciseIds([]);
+    setCompletedRecordedMs(0);
+    setFirstTake(null);
+    setRetryTake(null);
+    setFirstAnalysis(null);
+    setRetryAnalysis(null);
+    setAnalysisSource(null);
+    setCompletionMessage(null);
+    setActiveTrainingMs(0);
+  }
+
+  function closeTrainingSession() {
+    setSessionOpen(false);
+    setSessionStep('intro');
+    setActiveExerciseIndex(0);
+    setCompletedExerciseIds([]);
+    setCompletedRecordedMs(0);
+    setFirstTake(null);
+    setRetryTake(null);
+    setFirstAnalysis(null);
+    setRetryAnalysis(null);
+    setAnalysisSource(null);
+    setCompletionMessage(null);
+    setActiveTrainingMs(0);
+  }
+
+  function completeTrainingIfReady() {
+    if (!currentExercise) {
+      setCompletionMessage(state.language === 'ko' ? '오늘 사용할 수 있는 훈련이 없습니다.' : 'No exercise is available for today.');
+      return;
+    }
+
+    const currentAlreadyCompleted = completedExerciseIds.includes(currentExercise.id);
+    const nextCompletedIds = currentExercisePairComplete && !currentAlreadyCompleted
+      ? [...completedExerciseIds, currentExercise.id]
+      : completedExerciseIds;
+    const nextRecordedPracticeMs = currentExercisePairComplete && !currentAlreadyCompleted
+      ? completedRecordedMs + currentRecordedMs
+      : recordedPracticeMs;
+    const nextExerciseIndex = activeExerciseIndex + 1;
+
+    if (!currentExercisePairComplete) {
+      setCompletionMessage(state.language === 'ko' ? '이 훈련의 첫 테이크와 재시도를 모두 녹음해야 합니다.' : 'Record the first take and retry for this exercise.');
+      return;
+    }
+
+    if (nextExerciseIndex < todayExerciseCards.length && !currentAlreadyCompleted) {
+      setCompletedExerciseIds(nextCompletedIds);
+      setCompletedRecordedMs(nextRecordedPracticeMs);
+      setActiveExerciseIndex(nextExerciseIndex);
+      setFirstTake(null);
+      setRetryTake(null);
+      setFirstAnalysis(null);
+      setRetryAnalysis(null);
+      setAnalysisSource(null);
+      setCompletionMessage(null);
+      setSessionStep('intro');
+      return;
+    }
+
+    const allNextExercisesRecorded = nextCompletedIds.length >= dailyGoalTotal && dailyGoalTotal > 0;
+    const nextDailyCompletionReady = allNextExercisesRecorded && nextRecordedPracticeMs >= recordedTargetMs && activeTrainingMs >= DAILY_ACTIVE_TARGET_MS;
+
+    if (!nextDailyCompletionReady) {
+      const missingActiveMs = Math.max(0, DAILY_ACTIVE_TARGET_MS - activeTrainingMs);
+      const missingRecordedMs = Math.max(0, recordedTargetMs - nextRecordedPracticeMs);
+      const pieces = [
+        !allNextExercisesRecorded ? state.language === 'ko' ? '모든 훈련의 첫 테이크와 재시도를 녹음해야 합니다.' : 'Record first take and retry for every exercise.' : null,
+        missingRecordedMs > 0 ? state.language === 'ko' ? `녹음 시간이 ${formatTimer(missingRecordedMs)} 더 필요합니다.` : `Record ${formatTimer(missingRecordedMs)} more audio.` : null,
+        missingActiveMs > 0 ? state.language === 'ko' ? `활성 훈련 시간이 ${formatTimer(missingActiveMs)} 더 필요합니다.` : `Stay active ${formatTimer(missingActiveMs)} longer.` : null,
+      ].filter(Boolean);
+      setCompletionMessage(pieces.join(' '));
+      return;
+    }
+
+    const comparisonText = retryAnalysis?.comparison?.summary ?? (firstTake && retryTake ? compareTakes(firstTake, retryTake, state.language) : text.today.savedFallback);
+    completeSession({
+      title: `${displayedWeek.title} - ${currentExercise.title}`,
+      firstTakeUri: firstTake?.uri,
+      retryTakeUri: retryTake?.uri,
+      firstDurationMs: firstTake?.durationMs ?? 0,
+      retryDurationMs: retryTake?.durationMs ?? 0,
+      activeTrainingMs,
+      recordedPracticeMs: nextRecordedPracticeMs,
+      dailyGoalMet: true,
+      observation: feedback.observation,
+      comparison: comparisonText,
+      createdAt: new Date().toISOString(),
+      analysisMetrics: retryAnalysis?.metrics ?? firstAnalysis?.metrics,
+    });
+    closeTrainingSession();
+  }
+
   async function analyzeFirstTake(take: RecordedTake) {
-    if (!take.uri || !monthOneDrillId) {
+    const drillId = monthOneDrillId;
+    if (!take.uri || !drillId) {
       setAnalysisSource('fallback');
       return;
     }
@@ -159,7 +358,7 @@ export default function TodayScreen() {
       setAnalysisPending(true);
       const analysis = await analyzeMonthOneTake({
         uri: take.uri,
-        drillId: monthOneDrillId,
+        drillId,
         language: state.language,
         takeKind: 'first',
       });
@@ -173,7 +372,8 @@ export default function TodayScreen() {
   }
 
   async function analyzeRetryTake(take: RecordedTake) {
-    if (!take.uri || !monthOneDrillId) {
+    const drillId = monthOneDrillId;
+    if (!take.uri || !drillId) {
       setAnalysisSource('fallback');
       return null;
     }
@@ -182,7 +382,7 @@ export default function TodayScreen() {
       setAnalysisPending(true);
       const analysis = await analyzeMonthOneTake({
         uri: take.uri,
-        drillId: monthOneDrillId,
+        drillId,
         language: state.language,
         takeKind: 'retry',
         previousMetrics: firstAnalysis?.metrics,
@@ -205,10 +405,7 @@ export default function TodayScreen() {
           <View style={styles.sessionTop}>
             <Pressable
               accessibilityRole="button"
-              onPress={() => {
-                setSessionOpen(false);
-                setSessionStep('intro');
-              }}
+              onPress={closeTrainingSession}
               style={styles.iconButton}>
               <MaterialIcons name="close" size={22} color={theme.text} />
             </Pressable>
@@ -217,10 +414,10 @@ export default function TodayScreen() {
 
           {sessionStep === 'intro' ? (
             <View style={styles.stack}>
-              <Text style={styles.title}>{displaySessionText(todaySession.role, state.language)}: {displayCurrentWeek.title}</Text>
-              <Text style={styles.body}>{text.today.introBody}</Text>
-              <SessionCard icon="graphic-eq" title={text.today.warmUp} detail={displaySessionText(currentWeek.coreExercises[0], state.language)} />
-              <SessionCard icon="mic" title={text.today.mainDrill} detail={displaySessionText(todaySession.drill, state.language)} />
+              <Text style={styles.title}>{currentExercise ? `${currentExercise.title}: ${displayCurrentWeek.title}` : displayCurrentWeek.title}</Text>
+              <Text style={styles.body}>{currentExercise?.goal ?? text.today.introBody}</Text>
+              <SessionCard icon={currentExercise?.icon ?? 'graphic-eq'} title={text.today.warmUp} detail={currentExercise?.instruction ?? text.today.introBody} />
+              <SessionCard icon="mic" title={text.today.mainDrill} detail={currentExercise?.title ?? displaySessionText(todaySession.drill, state.language)} />
               <SessionCard icon="refresh" title={text.today.retryRule} detail={text.today.retryRuleDetail} />
               <PrimaryAction label={text.today.startRecording} icon="fiber-manual-record" onPress={() => setSessionStep('record')} />
             </View>
@@ -229,10 +426,10 @@ export default function TodayScreen() {
           {sessionStep === 'record' ? (
             <View style={styles.stack}>
               <Text style={styles.title}>{text.today.recordFirstTake}</Text>
-              <Text style={styles.body}>{displaySessionText(todaySession.focus, state.language)}. {text.today.storesLocally}</Text>
+              <Text style={styles.body}>{currentExercise?.instruction ?? displaySessionText(todaySession.focus, state.language)}. {text.today.storesLocally}</Text>
               <View style={styles.recordPanel}>
                 <SignalWave active />
-                <Text style={styles.recordLabel}>{displaySessionText(todaySession.drill, state.language)}</Text>
+                <Text style={styles.recordLabel}>{currentExercise?.title ?? displaySessionText(todaySession.drill, state.language)}</Text>
                 <Text style={styles.durationText}>{activeTake === 'first' ? formatDuration(recorderState.durationMillis) : text.today.readyToRecord}</Text>
               </View>
               {recordingError ? <Text style={styles.errorText}>{recordingError}</Text> : null}
@@ -254,11 +451,17 @@ export default function TodayScreen() {
           {sessionStep === 'feedback' ? (
             <View style={styles.stack}>
               <Text style={styles.title}>{text.today.oneThing}</Text>
-              {analysisPending ? <Text style={styles.body}>{state.language === 'ko' ? '서버 분석을 기다리는 중입니다. 곧 한 가지 힌트를 보여드립니다.' : 'Waiting for server analysis. One cue will appear shortly.'}</Text> : null}
-              <FeedbackBlock label={text.today.whatWeHeard} detail={feedback.observation} />
-              <FeedbackBlock label={text.today.whatItMeans} detail={feedback.interpretation} />
-              <FeedbackBlock label={text.today.oneFix} detail={feedback.cue} />
-              {analysisSource === 'fallback' ? <Text style={styles.analysisNote}>{state.language === 'ko' ? '서버에 연결할 수 없어 기기 내 기본 피드백을 사용했습니다.' : 'Server unavailable, so VoiceFix used the local fallback.'}</Text> : null}
+              {analysisPending ? <Text style={styles.body}>{text.settings.waitingForAnalysis}</Text> : null}
+              {firstAnalysis ? (
+                <AnalysisPanel analysis={firstAnalysis} title={text.settings.firstAnalysisTitle} text={text} />
+              ) : (
+                <>
+                  <FeedbackBlock label={text.today.whatWeHeard} detail={feedback.observation} />
+                  <FeedbackBlock label={text.today.whatItMeans} detail={feedback.interpretation} />
+                  <FeedbackBlock label={text.today.oneFix} detail={feedback.cue} />
+                </>
+              )}
+              {analysisSource === 'fallback' ? <Text style={styles.analysisNote}>{text.settings.localFallbackUsed}</Text> : null}
               <PrimaryAction label={text.today.retrySameDrill} icon="refresh" onPress={() => setSessionStep('retry')} />
             </View>
           ) : null}
@@ -269,7 +472,7 @@ export default function TodayScreen() {
               <Text style={styles.body}>{text.today.retryBody}</Text>
               <View style={styles.recordPanel}>
                 <SignalWave active />
-                <Text style={styles.recordLabel}>{text.today.secondTakeComparison}</Text>
+                <Text style={styles.recordLabel}>{currentExercise ? `${currentExercise.title} · ${text.today.secondTakeComparison}` : text.today.secondTakeComparison}</Text>
                 <Text style={styles.durationText}>{activeTake === 'retry' ? formatDuration(recorderState.durationMillis) : text.today.readyToRetry}</Text>
               </View>
               {recordingError ? <Text style={styles.errorText}>{recordingError}</Text> : null}
@@ -292,6 +495,7 @@ export default function TodayScreen() {
             <View style={styles.stack}>
               <Text style={styles.title}>{text.today.dayComplete}</Text>
               <Text style={styles.body}>{retryAnalysis?.comparison?.summary ?? (firstTake && retryTake ? compareTakes(firstTake, retryTake, state.language) : text.today.savedFallback)}</Text>
+              {retryAnalysis ? <AnalysisPanel analysis={retryAnalysis} title={text.settings.retryAnalysisTitle} text={text} /> : null}
               <View style={styles.panel}>
                 <Text style={styles.panelTitle}>{text.today.recordedTakes}</Text>
                 <Metric value={formatDuration(firstTake?.durationMs ?? 0)} label={text.common.firstTake} />
@@ -300,20 +504,24 @@ export default function TodayScreen() {
               <View style={styles.summaryGrid}>
                 <Metric value={`${state.streak.current}`} label={text.common.dayStreak} />
                 <Metric value={state.streak.monthlyGraceUsed ? '0' : '1'} label={text.common.graceDay} />
-                <Metric value={`${state.journeyDay}`} label={`${text.common.of} 180`} />
+                <Metric value={`${state.journeyDay}`} label={`${text.common.of} ${TOTAL_JOURNEY_DAYS}`} />
+              </View>
+              <View style={styles.panel}>
+                <Text style={styles.panelTitle}>{state.language === 'ko' ? '오늘 훈련 증거' : 'Daily training proof'}</Text>
+                <Metric value={formatTimer(activeTrainingMs)} label={state.language === 'ko' ? '활성 시간' : 'active time'} />
+                <Metric value={formatTimer(recordedPracticeMs)} label={state.language === 'ko' ? '녹음 시간' : 'recorded audio'} />
+                <Metric value={currentExercisePairComplete ? '2/2' : firstTake ? '1/2' : '0/2'} label={state.language === 'ko' ? '테이크' : 'takes'} />
+                <Text style={styles.analysisNote}>
+                  {state.language === 'ko'
+                    ? `완료 기준: 활성 훈련 ${formatTimer(DAILY_ACTIVE_TARGET_MS)}, 녹음 ${formatTimer(recordedTargetMs)}, 첫 테이크와 재시도.`
+                    : `Completion rule: ${formatTimer(DAILY_ACTIVE_TARGET_MS)} active training, ${formatTimer(recordedTargetMs)} recorded audio, first take and retry.`}
+                </Text>
+                {completionMessage ? <Text style={styles.errorText}>{completionMessage}</Text> : null}
               </View>
               <PrimaryAction
-                label={text.today.backToToday}
-                icon="home"
-                onPress={() => {
-                  setSessionOpen(false);
-                  setSessionStep('intro');
-                  setFirstTake(null);
-                  setRetryTake(null);
-                  setFirstAnalysis(null);
-                  setRetryAnalysis(null);
-                  setAnalysisSource(null);
-                }}
+                label={dailyCompletionReady ? text.today.backToToday : activeExerciseIndex < todayExerciseCards.length - 1 && currentExercisePairComplete ? state.language === 'ko' ? '다음 훈련' : 'Next exercise' : state.language === 'ko' ? '완료 기준 확인' : 'Check completion rule'}
+                icon={dailyCompletionReady ? 'home' : activeExerciseIndex < todayExerciseCards.length - 1 && currentExercisePairComplete ? 'navigate-next' : 'timer'}
+                onPress={completeTrainingIfReady}
               />
             </View>
           ) : null}
@@ -326,46 +534,342 @@ export default function TodayScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.kicker}>{text.common.day} {state.journeyDay} {text.common.of} 180</Text>
-          <Text style={styles.title}>{displayCurrentWeek.title}</Text>
-          <Text style={styles.body}>{displayCurrentWeek.goal}</Text>
-        </View>
-
-        <View style={styles.heroPanel}>
-          <View style={styles.heroMeta}>
-            <Text style={styles.phase}>{displayPhase(getPhaseLabel(currentWeek.phase), state.language)}</Text>
-            <Text style={styles.week}>{text.common.week} {currentWeek.weekNumber} · {text.common.day} {state.currentDayNumber}</Text>
+          <View style={styles.headerTop}>
+            <Text style={styles.title}>{forYouTitle}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={state.language === 'ko' ? '오늘 목표 보기' : 'Show daily goal'}
+              onPress={openGoalModal}
+              style={({ pressed }) => [styles.goalIconButton, pressed && styles.goalIconButtonPressed]}>
+              <MaterialIcons name={state.completedToday ? 'check-circle' : 'track-changes'} size={24} color={state.completedToday ? theme.success : theme.primaryBright} />
+            </Pressable>
           </View>
-          <SignalWave active />
-        </View>
-
-        <View style={styles.summaryGrid}>
-          <Metric value={`${state.streak.current}`} label={text.common.streak} />
-          <Metric value={state.streak.monthlyGraceUsed ? text.common.used : text.common.ready} label={text.common.grace} />
-          <Metric value={displayPreferenceValue(state.sessionLength, state.language)} label={text.common.today} />
-        </View>
-
-        <View style={styles.panel}>
-          <View style={styles.panelHead}>
-            <Text style={styles.panelTitle}>{text.today.todaysSession}</Text>
-            <Text style={styles.panelSub}>{displaySessionText(todaySession.role, state.language)}</Text>
+          <View style={styles.forYouLine}>
+            <MaterialIcons name="auto-awesome" size={26} color={theme.primaryBright} />
+            <Text style={styles.forYouSubtitle}>{forYouSubtitle}</Text>
           </View>
-          {currentWeek.coreExercises.slice(0, 3).map((exercise, index) => (
-            <SessionCard key={exercise} icon={index === 0 ? 'air' : index === 1 ? 'graphic-eq' : 'refresh'} title={`${index + 1}. ${displaySessionText(exercise, state.language)}`} detail={index === 2 ? text.today.recordCueRetry : displaySessionText(todaySession.focus, state.language)} />
-          ))}
+          <View style={styles.headerStats}>
+            <HeaderStat icon="local-fire-department" value={`${state.streak.current}`} label={text.common.streak} />
+            <HeaderStat
+              icon="shield"
+              value={state.streak.monthlyGraceUsed ? text.common.used : text.common.ready}
+              label={text.common.grace}
+            />
+          </View>
         </View>
+
+        <ForYouStack
+          dayLabel={`${text.common.day} ${state.currentDayNumber}`}
+          selectedWeekNumber={selectedWeekNumber}
+          weeks={selectableWeeks}
+          exercises={todayExerciseCards}
+          language={state.language}
+          onSelectWeek={(weekNumber) => {
+            setSelectedWeekNumber(weekNumber);
+            setActiveExerciseIndex(0);
+          }}
+          onMoveExercise={(fromIndex, toIndex) => reorderWeekExercise(displayedWeek.weekNumber, fromIndex, toIndex)}
+          onPressExercise={startTrainingSession}
+        />
 
         {state.placement ? (
           <View style={styles.note}>
             <MaterialIcons name="route" size={20} color={theme.warning} />
-            <Text style={styles.noteText}>{state.language === 'ko' ? text.today.placementReason : state.placement.reason}</Text>
+            <Text style={styles.noteText}>{text.today.placementReason}</Text>
           </View>
         ) : null}
-
-        <PrimaryAction label={state.completedToday ? text.today.practiceAgain : text.today.startTraining} icon="play-arrow" onPress={() => setSessionOpen(true)} />
       </ScrollView>
+      <DailyGoalModal
+        visible={goalModalVisible}
+        completed={dailyGoalCompleted}
+        total={dailyGoalTotal}
+        activeMs={displayedGoalActiveMs}
+        activeTargetMs={DAILY_ACTIVE_TARGET_MS}
+        language={state.language}
+        fade={goalFade}
+        onClose={closeGoalModal}
+      />
     </SafeAreaView>
   );
+}
+
+function HeaderStat({
+  icon,
+  value,
+  label,
+}: {
+  icon: ComponentProps<typeof MaterialIcons>['name'];
+  value: string;
+  label: string;
+}) {
+  return (
+    <View style={styles.headerStat}>
+      <MaterialIcons name={icon} size={17} color={theme.primaryBright} />
+      <Text style={styles.headerStatValue}>{value}</Text>
+      <Text style={styles.headerStatLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function getExerciseIcon(exercise: CurriculumExercise): ComponentProps<typeof MaterialIcons>['name'] {
+  if (exercise.category === 'breathing') {
+    return 'air';
+  }
+
+  if (exercise.category === 'resonance') {
+    return 'graphic-eq';
+  }
+
+  if (exercise.category === 'integration') {
+    return 'compare-arrows';
+  }
+
+  return 'mic';
+}
+
+function ForYouStack({
+  dayLabel,
+  selectedWeekNumber,
+  weeks,
+  exercises,
+  language,
+  onSelectWeek,
+  onMoveExercise,
+  onPressExercise,
+}: {
+  dayLabel: string;
+  selectedWeekNumber: number;
+  weeks: typeof curriculum;
+  exercises: TodayExerciseCard[];
+  language: string;
+  onSelectWeek: (weekNumber: number) => void;
+  onMoveExercise: (fromIndex: number, toIndex: number) => void;
+  onPressExercise: () => void;
+}) {
+  const visibleExercises = exercises.slice(0, 5);
+  const [activeExercise, ...backExercises] = visibleExercises;
+  const peekStep = 34;
+  const frontOffset = backExercises.length > 0 ? backExercises.length * peekStep + SPACE * 2 : 0;
+  const deckHeight = frontOffset + 260;
+
+  return (
+    <View style={styles.pickStack}>
+      <Text style={styles.dayLabel}>{dayLabel}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekSelector}>
+        {weeks.map((week) => {
+          const selected = week.weekNumber === selectedWeekNumber;
+
+          return (
+            <Pressable
+              key={week.weekNumber}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              onPress={() => onSelectWeek(week.weekNumber)}
+              style={({ pressed }) => [styles.weekChip, selected && styles.weekChipActive, pressed && styles.weekChipPressed]}>
+              <Text style={[styles.weekChipText, selected && styles.weekChipTextActive]}>
+                {language === 'ko' ? `${week.weekNumber}주` : `Week ${week.weekNumber}`}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      <View style={[styles.exerciseDeck, { height: deckHeight }]}>
+        {backExercises.map((exercise, index) => {
+          const top = (backExercises.length - index - 1) * peekStep;
+          const inset = (backExercises.length - index) * SPACE * 2;
+
+          return (
+            <Pressable
+              key={exercise.id}
+              accessibilityLabel={language === 'ko' ? `${exercise.title} 보기` : `Show ${exercise.title}`}
+              accessibilityRole="button"
+              onPress={() => onMoveExercise(index + 1, 0)}
+              style={({ pressed }) => [
+                styles.deckBackCard,
+                {
+                  left: inset,
+                  right: inset,
+                  top,
+                  zIndex: 10 - index,
+                },
+                pressed && styles.deckBackCardPressed,
+              ]}>
+              <View style={styles.deckBackHeader}>
+                <MaterialIcons name={exercise.icon} size={18} color={theme.textSubtle} />
+                <Text numberOfLines={1} style={styles.deckBackTitle}>{exercise.title}</Text>
+              </View>
+            </Pressable>
+          );
+        })}
+
+        {activeExercise ? (
+          <Pressable
+            key={activeExercise.id}
+            accessibilityLabel={language === 'ko' ? `${activeExercise.title} 시작` : `Start ${activeExercise.title}`}
+            accessibilityRole="button"
+            onPress={onPressExercise}
+            style={({ pressed }) => [
+              styles.exerciseBlockCard,
+              styles.deckFrontCard,
+              { top: frontOffset },
+              pressed && styles.exerciseBlockPressed,
+            ]}>
+              <TaskCardContent exercise={activeExercise} index={0} language={language} />
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function ExercisePattern({ visual, muted = false }: { visual: TodayExerciseCard['visual']; muted?: boolean }) {
+  const color = muted ? 'rgba(184, 199, 211, 0.36)' : theme.text;
+  const patterns: Record<TodayExerciseCard['visual'], number[]> = {
+    sustain: [0, 0, 0, 0, 0],
+    pulse: [0, 10, 0, 10, 0],
+    flat: [0, 0, 0, 0],
+    arc: [14, 6, 0, 6, 14],
+    rise: [18, 12, 6, 0],
+    fall: [0, 6, 12, 18],
+    wave: [10, 0, 10, 0, 10],
+  };
+
+  return (
+    <View style={styles.patternRow}>
+      {patterns[visual].map((offset, index) => (
+        <View key={`${visual}-${index}`} style={[styles.patternMark, { backgroundColor: color, transform: [{ translateY: offset }] }]} />
+      ))}
+    </View>
+  );
+}
+
+function TaskCardContent({
+  exercise,
+  index,
+  language,
+  muted = false,
+}: {
+  exercise: TodayExerciseCard;
+  index: number;
+  language: string;
+  muted?: boolean;
+}) {
+  return (
+    <View style={styles.taskCardInner}>
+      <View style={styles.exerciseCardHeader}>
+        <View style={styles.pickExerciseIcon}>
+          <MaterialIcons name={exercise.icon} size={18} color={muted ? theme.textSubtle : theme.primaryBright} />
+        </View>
+        <Text style={[styles.pickExerciseKicker, muted && styles.pickExerciseMuted]}>{language === 'ko' ? '훈련' : 'Task'} {index + 1}</Text>
+      </View>
+      <ExercisePattern visual={exercise.visual} muted={muted} />
+      <Text style={[styles.pickExerciseTitle, muted && styles.pickExerciseMuted]}>{exercise.title}</Text>
+    </View>
+  );
+}
+
+function DailyGoalCard({
+  completed,
+  total,
+  activeMs,
+  activeTargetMs,
+  language,
+  onClose,
+}: {
+  completed: number;
+  total: number;
+  activeMs: number;
+  activeTargetMs: number;
+  language: string;
+  onClose: () => void;
+}) {
+  const timeProgress = Math.min(1, activeMs / activeTargetMs);
+  const title = language === 'ko' ? '오늘 목표' : 'Daily Goal';
+  const timeLabel = language === 'ko' ? '훈련 시간' : 'Training time';
+  const exerciseLabel = language === 'ko' ? '훈련' : 'Exercises';
+  const timeRingColor = timeProgress >= 1 ? 'rgba(100, 217, 154, 0.66)' : `rgba(50, 230, 226, ${0.22 + timeProgress * 0.5})`;
+
+  return (
+    <View style={styles.dailyGoalCard}>
+      <View style={styles.goalHeader}>
+        <Text style={styles.panelTitle}>{title}</Text>
+        <Pressable accessibilityRole="button" onPress={onClose} style={styles.goalInlineClose}>
+          <MaterialIcons name="close" size={22} color={theme.text} />
+        </Pressable>
+      </View>
+
+      <View style={styles.goalMeterRow}>
+        <View style={styles.goalMeter}>
+          <View style={[styles.goalRing, completed >= total && styles.goalRingComplete]}>
+            <Text style={styles.goalRingValue}>{completed}</Text>
+            <Text style={styles.goalRingTotal}>/{total}</Text>
+          </View>
+          <Text style={styles.goalMeterLabel}>{exerciseLabel}</Text>
+        </View>
+
+        <View style={styles.goalMeter}>
+          <View style={[styles.goalRing, { borderColor: timeRingColor }]}>
+            <Text style={styles.goalTimeCircleValue}>{formatTimer(activeMs)}</Text>
+            <Text style={styles.goalTimeCircleTotal}>/ {formatTimer(activeTargetMs)}</Text>
+          </View>
+          <Text style={styles.goalMeterLabel}>{timeLabel}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function DailyGoalModal({
+  visible,
+  completed,
+  total,
+  activeMs,
+  activeTargetMs,
+  language,
+  fade,
+  onClose,
+}: {
+  visible: boolean;
+  completed: number;
+  total: number;
+  activeMs: number;
+  activeTargetMs: number;
+  language: string;
+  fade: Animated.Value;
+  onClose: () => void;
+}) {
+  const sheetY = fade.interpolate({
+    inputRange: [0, 1],
+    outputRange: [18, 0],
+  });
+
+  return (
+    <Modal animationType="none" transparent visible={visible} onRequestClose={onClose}>
+      <Animated.View style={[styles.modalFadeLayer, { opacity: fade }]}>
+        <Pressable accessibilityRole="button" style={styles.modalBackdrop} onPress={onClose}>
+          <Pressable style={styles.goalModalContent}>
+            <Animated.View style={[styles.goalModalSheet, { transform: [{ translateY: sheetY }] }]}>
+              <ScrollView style={styles.goalModalScroll} contentContainerStyle={styles.goalModalScrollContent} showsVerticalScrollIndicator={false}>
+                <DailyGoalCard completed={completed} total={total} activeMs={activeMs} activeTargetMs={activeTargetMs} language={language} onClose={onClose} />
+              </ScrollView>
+            </Animated.View>
+          </Pressable>
+        </Pressable>
+      </Animated.View>
+    </Modal>
+  );
+}
+
+function formatDebugMetric(value: number | undefined | null) {
+  return typeof value === 'number' ? value.toFixed(2) : 'n/a';
+}
+
+function formatTimer(durationMs: number) {
+  const totalSeconds = Math.max(0, Math.ceil(durationMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = `${totalSeconds % 60}`.padStart(2, '0');
+  return `${minutes}:${seconds}`;
 }
 
 function PrimaryAction({ label, icon, onPress }: { label: string; icon: ComponentProps<typeof MaterialIcons>['name']; onPress: () => void }) {
@@ -400,6 +904,44 @@ function FeedbackBlock({ label, detail }: { label: string; detail: string }) {
   );
 }
 
+function AnalysisPanel({ analysis, title, text }: { analysis: MonthOneAnalysisResponse; title: string; text: typeof mainAppText.en }) {
+  const safetyText = analysis.safetyFlags.length > 0 ? analysis.safetyFlags.join(', ').replaceAll('_', ' ') : null;
+
+  return (
+    <View style={styles.analysisPanel}>
+      <View style={styles.analysisHeader}>
+        <Text style={styles.panelTitle}>{title}</Text>
+        <View style={styles.analysisPills}>
+          <Text style={styles.analysisPill}>{analysis.quality.replaceAll('_', ' ')}</Text>
+          <Text style={styles.analysisPill}>{analysis.drillId.replaceAll('_', ' ')}</Text>
+        </View>
+      </View>
+
+      <View style={styles.analysisMetrics}>
+        <Metric value={formatDebugMetric(analysis.metrics.resonanceScore)} label="resonance" />
+        <Metric value={formatDebugMetric(analysis.metrics.forwardEnergyRatio)} label="forward" />
+        <Metric value={formatDebugMetric(analysis.metrics.throatEnergyRatio)} label="throat" />
+      </View>
+
+      <AnalysisLine label={text.today.whatWeHeard} detail={analysis.feedback.whatWeHeard} />
+      <AnalysisLine label={text.today.whatItMeans} detail={analysis.feedback.whatItOftenMeans} />
+      <AnalysisLine label={text.today.oneFix} detail={analysis.feedback.oneThingToTry} />
+      <AnalysisLine label={text.today.retryRule} detail={analysis.feedback.retryGoal} />
+      {analysis.comparison ? <AnalysisLine label={text.today.secondTakeComparison} detail={analysis.comparison.summary} /> : null}
+      {safetyText ? <Text style={styles.analysisSafety}>{safetyText}</Text> : null}
+    </View>
+  );
+}
+
+function AnalysisLine({ label, detail }: { label: string; detail: string }) {
+  return (
+    <View style={styles.analysisLine}>
+      <Text style={styles.feedbackLabel}>{label}</Text>
+      <Text style={styles.feedbackDetail}>{detail}</Text>
+    </View>
+  );
+}
+
 function Metric({ value, label }: { value: string; label: string }) {
   return (
     <View style={styles.metric}>
@@ -415,8 +957,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    gap: 18,
-    padding: 20,
+    gap: SPACE * 5,
+    paddingHorizontal: SPACE * 6,
+    paddingTop: SPACE * 3,
     paddingBottom: 116,
   },
   loadingScreen: {
@@ -430,8 +973,27 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   header: {
-    gap: 9,
-    paddingTop: 12,
+    gap: SPACE * 4,
+    paddingTop: SPACE,
+  },
+  headerTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: SPACE * 2,
+    justifyContent: 'space-between',
+  },
+  goalIconButton: {
+    alignItems: 'center',
+    backgroundColor: theme.surfaceRaised,
+    borderColor: 'rgba(50, 230, 226, 0.28)',
+    borderRadius: 24,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
+  goalIconButtonPressed: {
+    backgroundColor: theme.surfacePressed,
   },
   sessionTop: {
     alignItems: 'center',
@@ -468,6 +1030,293 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
   },
+  forYouLine: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: SPACE * 2,
+  },
+  forYouSubtitle: {
+    color: theme.text,
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 24,
+  },
+  headerStats: {
+    flexDirection: 'row',
+    gap: SPACE * 2,
+  },
+  headerStat: {
+    alignItems: 'center',
+    backgroundColor: theme.surfaceRaised,
+    borderColor: 'rgba(184, 199, 211, 0.12)',
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    gap: SPACE,
+    minHeight: 44,
+    paddingHorizontal: SPACE * 2,
+  },
+  headerStatValue: {
+    color: theme.text,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  headerStatLabel: {
+    color: theme.textSubtle,
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  pickStack: {
+    gap: SPACE * 2,
+  },
+  dayLabel: {
+    color: theme.text,
+    fontSize: 22,
+    fontWeight: '900',
+    lineHeight: 27,
+    paddingHorizontal: SPACE,
+  },
+  weekSelector: {
+    gap: SPACE,
+    paddingHorizontal: SPACE,
+    paddingVertical: SPACE,
+  },
+  weekChip: {
+    backgroundColor: theme.surfaceRaised,
+    borderColor: theme.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    minHeight: 38,
+    paddingHorizontal: SPACE * 3,
+    justifyContent: 'center',
+  },
+  weekChipActive: {
+    borderColor: theme.primaryBright,
+  },
+  weekChipPressed: {
+    backgroundColor: theme.surfacePressed,
+  },
+  weekChipText: {
+    color: theme.textSubtle,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  weekChipTextActive: {
+    color: theme.primaryBright,
+  },
+  exerciseDeck: {
+    marginTop: SPACE,
+    position: 'relative',
+  },
+  exerciseBlockCard: {
+    backgroundColor: theme.surfaceRaised,
+    borderColor: 'rgba(50, 230, 226, 0.18)',
+    borderRadius: 22,
+    borderWidth: 1,
+    minHeight: 236,
+    overflow: 'hidden',
+    padding: SPACE * 5,
+    position: 'relative',
+  },
+  exerciseBlockPressed: {
+    backgroundColor: theme.surfacePressed,
+  },
+  deckBackCard: {
+    backgroundColor: theme.surfaceRaised,
+    borderColor: 'rgba(184, 199, 211, 0.1)',
+    borderRadius: 22,
+    borderWidth: 1,
+    height: 104,
+    overflow: 'hidden',
+    paddingHorizontal: SPACE * 5,
+    paddingTop: SPACE * 4,
+    position: 'absolute',
+    shadowColor: '#000000',
+    shadowOffset: { height: 16, width: 0 },
+    shadowOpacity: 0.22,
+    shadowRadius: 22,
+  },
+  deckBackCardPressed: {
+    backgroundColor: theme.surfacePressed,
+  },
+  deckBackHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: SPACE * 2,
+  },
+  deckBackTitle: {
+    color: theme.textSubtle,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  deckFrontCard: {
+    left: 0,
+    minHeight: 260,
+    position: 'absolute',
+    right: 0,
+    zIndex: 20,
+  },
+  patternRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5,
+    height: 72,
+    justifyContent: 'center',
+    marginTop: SPACE * 4,
+  },
+  patternMark: {
+    borderRadius: 999,
+    height: 7,
+    width: 42,
+  },
+  taskCardInner: {
+    flex: 1,
+    justifyContent: 'space-between',
+    minHeight: 186,
+  },
+  pickExerciseIcon: {
+    alignItems: 'center',
+    backgroundColor: theme.primarySoft,
+    borderRadius: 14,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
+  exerciseCardHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: SPACE * 2,
+  },
+  pickExerciseKicker: {
+    color: theme.primaryBright,
+    fontSize: 15,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  pickExerciseTitle: {
+    color: theme.text,
+    fontSize: 28,
+    fontWeight: '900',
+    lineHeight: 34,
+    marginTop: SPACE * 3,
+  },
+  pickExerciseMuted: {
+    color: theme.textSubtle,
+  },
+  dailyGoalCard: {
+    alignItems: 'center',
+    backgroundColor: theme.surfaceRaised,
+    borderColor: 'rgba(184, 199, 211, 0.12)',
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: SPACE,
+    padding: SPACE * 2,
+  },
+  goalHeader: {
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  goalMeterRow: {
+    alignItems: 'flex-start',
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    gap: SPACE,
+    justifyContent: 'center',
+  },
+  goalMeter: {
+    alignItems: 'center',
+    flex: 1,
+    gap: SPACE,
+    minWidth: 0,
+  },
+  goalRing: {
+    alignItems: 'center',
+    borderColor: 'rgba(184, 199, 211, 0.22)',
+    borderRadius: 41,
+    borderWidth: 8,
+    flexDirection: 'row',
+    height: 82,
+    justifyContent: 'center',
+    width: 82,
+  },
+  goalRingComplete: {
+    borderColor: 'rgba(100, 217, 154, 0.66)',
+  },
+  goalRingValue: {
+    color: theme.text,
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  goalRingTotal: {
+    color: theme.textMuted,
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 5,
+  },
+  goalTimeCircleValue: {
+    color: theme.text,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  goalTimeCircleTotal: {
+    color: theme.textMuted,
+    fontSize: 9,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  goalMeterLabel: {
+    color: theme.textSubtle,
+    fontSize: 11,
+    fontWeight: '800',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  },
+  modalFadeLayer: {
+    flex: 1,
+  },
+  modalBackdrop: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(7, 10, 16, 0.72)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 12,
+  },
+  goalModalContent: {
+    maxHeight: '92%',
+    maxWidth: 340,
+    width: '100%',
+  },
+  goalModalSheet: {
+    gap: SPACE * 1.5,
+    maxHeight: '100%',
+    width: '100%',
+  },
+  goalModalScroll: {
+    flexGrow: 0,
+    width: '100%',
+  },
+  goalModalScrollContent: {
+    paddingBottom: SPACE,
+  },
+  goalInlineClose: {
+    alignItems: 'center',
+    backgroundColor: theme.surfaceRaised,
+    borderColor: 'rgba(184, 199, 211, 0.16)',
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
   heroPanel: {
     backgroundColor: theme.surfaceRaised,
     borderColor: 'rgba(50, 230, 226, 0.24)',
@@ -478,16 +1327,6 @@ const styles = StyleSheet.create({
   },
   heroMeta: {
     gap: 4,
-  },
-  phase: {
-    color: theme.text,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  week: {
-    color: theme.textSubtle,
-    fontSize: 13,
-    fontWeight: '700',
   },
   summaryGrid: {
     flexDirection: 'row',
@@ -631,6 +1470,51 @@ const styles = StyleSheet.create({
   },
   analysisNote: {
     color: theme.textSubtle,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+  },
+  analysisPanel: {
+    backgroundColor: theme.surfaceRaised,
+    borderColor: 'rgba(50, 230, 226, 0.24)',
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 13,
+    padding: 16,
+  },
+  analysisHeader: {
+    gap: 10,
+  },
+  analysisPills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  analysisPill: {
+    backgroundColor: theme.primarySoft,
+    borderColor: 'rgba(50, 230, 226, 0.24)',
+    borderRadius: 999,
+    borderWidth: 1,
+    color: theme.primaryBright,
+    fontSize: 12,
+    fontWeight: '800',
+    overflow: 'hidden',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    textTransform: 'uppercase',
+  },
+  analysisMetrics: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  analysisLine: {
+    borderTopColor: 'rgba(184, 199, 211, 0.12)',
+    borderTopWidth: 1,
+    gap: 5,
+    paddingTop: 12,
+  },
+  analysisSafety: {
+    color: theme.warning,
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,

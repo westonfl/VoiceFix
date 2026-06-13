@@ -126,15 +126,17 @@ function ChoiceScreen({ screen, answers, onSelect, onToggle }: ScreenProps) {
   );
 }
 
-function PermissionScreen({ screen }: ScreenProps) {
+function PermissionScreen({ screen, language }: ScreenProps) {
+  const text = uiText[language];
+
   return (
     <View style={styles.stack}>
       <ScreenHeader eyebrow={screen.eyebrow} title={screen.title} body={screen.body} />
       <View style={styles.permissionPanel}>
         <MaterialIcons name="mic" size={34} color={theme.primaryBright} />
         <View style={styles.permissionCopy}>
-          <Text style={styles.panelTitle}>Mic access for baseline checks</Text>
-          <Text style={styles.panelText}>VoiceFix listens only during exercises you start.</Text>
+          <Text style={styles.panelTitle}>{text.micAccessTitle}</Text>
+          <Text style={styles.panelText}>{text.micAccessBody}</Text>
         </View>
       </View>
     </View>
@@ -159,8 +161,7 @@ function RecordingScreen({ screen, language, recordingComplete }: ScreenProps) {
           </View>
           <View>
             <Text style={styles.recordMeta}>
-              {text.sample} {recording.index}
-              {language === 'ko' ? text.of : ` ${text.of} `}5
+              {text.sample} {recording.index} {text.of} 5
             </Text>
             <Text style={styles.recordTitle}>{recording.title}</Text>
           </View>
@@ -203,20 +204,12 @@ function RecapScreen({ screen, answers, language, plan }: ScreenProps) {
         <RecapBlock
           icon="person-search"
           title={text.fromAnswers}
-          body={
-            language === 'ko'
-              ? `${answerLabel(answers.primaryGoal, language)} 목표, ${answerLabel(answers.playbackComfort, language)}, ${answerLabel(answers.practiceLength, language)}${text.recapRoutine}.`
-              : `${answerLabel(answers.primaryGoal, language)} goal, ${answerLabel(answers.playbackComfort, language)} playback comfort, ${answerLabel(answers.practiceLength, language)} ${text.recapRoutine}.`
-          }
+          body={`${answerLabel(answers.primaryGoal, language)} ${text.goalWord}, ${answerLabel(answers.playbackComfort, language)} ${text.playbackComfortWord}, ${answerLabel(answers.practiceLength, language)} ${text.recapRoutine}.`}
         />
         <RecapBlock
           icon="graphic-eq"
           title={text.fromVoiceCheck}
-          body={
-            language === 'ko'
-              ? `${text.starterHypothesis} ${plan.focus}.`
-              : `${text.starterHypothesis} ${plan.focus.toLowerCase()}.`
-          }
+          body={`${text.starterHypothesis} ${plan.focus}.`}
         />
         <RecapBlock icon="verified" title={text.carefulClaim} body={text.carefulClaimBody} />
       </View>

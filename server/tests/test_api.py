@@ -42,7 +42,31 @@ def test_month_one_analyze_accepts_wav():
     assert "feedback" in body
 
 
-def test_resonance_vowel_drill_is_supported():
+def test_each_month_one_exercise_analyzer_is_supported():
+    supported_drills = [
+        "sustained_hiss",
+        "gentle_hum",
+        "soft_hum_start",
+        "mmm_resonance",
+        "fah_vah_resonance",
+        "hum_to_ah",
+        "short_tone_hold",
+    ]
+    t = np.linspace(0, 3.0, SAMPLE_RATE * 3, endpoint=False)
+    samples = 0.12 * np.sin(2 * np.pi * 180 * t) + 0.08 * np.sin(2 * np.pi * 1440 * t)
+
+    for drill_id in supported_drills:
+        response = client.post(
+            "/api/month-one/analyze",
+            data={"drill_id": drill_id, "language": "en", "take_kind": "first"},
+            files={"audio": ("take.wav", wav_bytes(samples), "audio/wav")},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["drillId"] == drill_id
+
+
+def test_legacy_drill_alias_returns_canonical_drill_id():
     t = np.linspace(0, 3.0, SAMPLE_RATE * 3, endpoint=False)
     samples = 0.12 * np.sin(2 * np.pi * 180 * t) + 0.08 * np.sin(2 * np.pi * 1440 * t)
 
@@ -53,7 +77,7 @@ def test_resonance_vowel_drill_is_supported():
     )
 
     assert response.status_code == 200
-    assert response.json()["drillId"] == "resonance_vowel"
+    assert response.json()["drillId"] == "fah_vah_resonance"
 
 
 def test_unsupported_drill_is_rejected():
@@ -71,7 +95,7 @@ def test_unsupported_drill_is_rejected():
 def test_missing_audio_is_rejected():
     response = client.post(
         "/api/month-one/analyze",
-        data={"drill_id": "soft_hiss", "language": "en", "take_kind": "first"},
+        data={"drill_id": "sustained_hiss", "language": "en", "take_kind": "first"},
     )
 
     assert response.status_code == 422
@@ -82,7 +106,7 @@ def test_too_short_audio_returns_structured_quality():
 
     response = client.post(
         "/api/month-one/analyze",
-        data={"drill_id": "soft_hiss", "language": "en", "take_kind": "first"},
+        data={"drill_id": "sustained_hiss", "language": "en", "take_kind": "first"},
         files={"audio": ("short.wav", wav_bytes(samples), "audio/wav")},
     )
 

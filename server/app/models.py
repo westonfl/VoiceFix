@@ -3,7 +3,19 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-DrillId = Literal["soft_hiss", "gentle_hum", "mmm_resonance", "hum_to_ah", "short_tone", "resonance_vowel"]
+DrillId = Literal[
+    "sustained_hiss",
+    "gentle_hum",
+    "soft_hum_start",
+    "mmm_resonance",
+    "fah_vah_resonance",
+    "hum_to_ah",
+    "short_tone_hold",
+    # Compatibility aliases for older mobile builds and manual tests.
+    "soft_hiss",
+    "resonance_vowel",
+    "short_tone",
+]
 Language = Literal["en", "ko"]
 TakeKind = Literal["first", "retry"]
 Quality = Literal["usable", "too_short", "too_quiet", "clipped", "noisy", "unsupported"]

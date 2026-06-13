@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import type { Language, OnboardingAnswers } from '@/features/onboarding/types';
 
-import { getPlacementFromAnswers, getWeek, type CurriculumWeek, type PlacementResult } from './curriculum';
+import { DAYS_PER_WEEK, getPlacementFromAnswers, getWeek, TOTAL_CURRICULUM_WEEKS, TOTAL_JOURNEY_DAYS, type CurriculumWeek, type PlacementResult } from './curriculum';
 import { normalizeMainLanguage, type MainAppLanguage } from './localization';
 
 export type SavedClip = {
@@ -15,6 +15,9 @@ export type SavedClip = {
   retryTakeUri?: string;
   firstDurationMs: number;
   retryDurationMs: number;
+  activeTrainingMs?: number;
+  recordedPracticeMs?: number;
+  dailyGoalMet?: boolean;
   observation: string;
   comparison: string;
   createdAt: string;
@@ -25,6 +28,11 @@ export type StreakState = {
   current: number;
   best: number;
   monthlyGraceUsed: boolean;
+};
+
+export type MonthlyTestResult = {
+  status: 'not_started' | 'passed';
+  completedAt?: string;
 };
 
 export type PrototypeUserState = {
@@ -41,6 +49,8 @@ export type PrototypeUserState = {
   savedClips: SavedClip[];
   completedToday: boolean;
   language: MainAppLanguage;
+  exerciseOrdersByWeek: Record<string, string[]>;
+  monthlyTests: Record<string, MonthlyTestResult>;
 };
 
 type PrototypeContextValue = {
@@ -50,9 +60,14 @@ type PrototypeContextValue = {
   completeOnboarding: (answers: OnboardingAnswers, language?: Language) => void;
   completeSession: (clip: Omit<SavedClip, 'id' | 'weekNumber' | 'dayNumber'>) => void;
   resetPrototype: () => void;
-  setTrainingPreference: (key: 'trainingTime' | 'notificationTone' | 'sessionLength', value: string) => void;
+  setTrainingPreference: (key: 'trainingTime' | 'notificationTone', value: string) => void;
   setLanguage: (language: MainAppLanguage) => void;
+  reorderWeekExercise: (weekNumber: number, fromIndex: number, toIndex: number) => void;
+  completeMonthlyTest: (month: number) => void;
 };
+
+const DAILY_SESSION_LENGTH = '10 minutes';
+const MAX_AVAILABLE_WEEK = 4;
 
 const initialState: PrototypeUserState = {
   onboardingComplete: false,
@@ -61,7 +76,7 @@ const initialState: PrototypeUserState = {
   journeyDay: 1,
   trainingTime: '7:30 PM',
   notificationTone: 'Coach-like',
-  sessionLength: '12 minutes',
+  sessionLength: DAILY_SESSION_LENGTH,
   streak: {
     current: 0,
     best: 0,
@@ -70,12 +85,69 @@ const initialState: PrototypeUserState = {
   savedClips: [],
   completedToday: false,
   language: 'en',
+  exerciseOrdersByWeek: {},
+  monthlyTests: {},
 };
 
 const PrototypeContext = createContext<PrototypeContextValue | null>(null);
-const STORAGE_KEY = 'voicefix:mvp-state:v1';
+const STORAGE_KEY = 'voicefix:mvp-state:v2';
 
 type StoredPrototypeUserState = Partial<PrototypeUserState> & { language?: Language };
+
+function clampNumber(value: unknown, min: number, max: number, fallback: number) {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
+}
+
+function normalizeStoredState(parsed: StoredPrototypeUserState): PrototypeUserState {
+  const currentWeekNumber = clampNumber(parsed.currentWeekNumber, 1, MAX_AVAILABLE_WEEK, initialState.currentWeekNumber);
+  const currentDayNumber = clampNumber(parsed.currentDayNumber, 1, DAYS_PER_WEEK, initialState.currentDayNumber);
+  const journeyDay = clampNumber(parsed.journeyDay, 1, TOTAL_JOURNEY_DAYS, (currentWeekNumber - 1) * DAYS_PER_WEEK + currentDayNumber);
+
+  return {
+    ...initialState,
+    ...parsed,
+    currentWeekNumber,
+    currentDayNumber,
+    journeyDay,
+    sessionLength: DAILY_SESSION_LENGTH,
+    exerciseOrdersByWeek: parsed.exerciseOrdersByWeek ?? initialState.exerciseOrdersByWeek,
+    monthlyTests: parsed.monthlyTests ?? initialState.monthlyTests,
+    language: parsed.language ? normalizeMainLanguage(parsed.language) : initialState.language,
+  };
+}
+
+function getOrderedExerciseIds(week: CurriculumWeek, storedOrder?: string[]) {
+  const exerciseIds = week.exercises.length > 0 ? week.exercises.map((exercise) => exercise.id) : week.coreExercises;
+  const validExercises = new Set(exerciseIds);
+  const saved = storedOrder?.filter((exercise) => validExercises.has(exercise)) ?? [];
+  const missing = exerciseIds.filter((exercise) => !saved.includes(exercise));
+
+  return [...saved, ...missing];
+}
+
+function buildNextExerciseOrders(
+  currentOrders: Record<string, string[]>,
+  week: CurriculumWeek,
+  weekNumber: number,
+  fromIndex: number,
+  toIndex: number,
+) {
+  const currentOrder = getOrderedExerciseIds(week, currentOrders[`${weekNumber}`]);
+  const clampedToIndex = Math.min(Math.max(toIndex, 0), currentOrder.length - 1);
+
+  if (fromIndex === clampedToIndex) {
+    return currentOrders;
+  }
+
+  const nextOrder = [...currentOrder];
+  const [movedExercise] = nextOrder.splice(fromIndex, 1);
+  nextOrder.splice(clampedToIndex, 0, movedExercise);
+
+  return {
+    ...currentOrders,
+    [`${weekNumber}`]: nextOrder,
+  };
+}
 
 export function PrototypeProvider({ children }: PropsWithChildren) {
   const [state, setState] = useState<PrototypeUserState>(initialState);
@@ -91,11 +163,7 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored && mounted) {
           const parsed = JSON.parse(stored) as StoredPrototypeUserState;
-          setState({
-            ...initialState,
-            ...parsed,
-            language: parsed.language ? normalizeMainLanguage(parsed.language) : initialState.language,
-          });
+          setState(normalizeStoredState(parsed));
         }
       } catch {
         // If local state is corrupted, keep the default first-run state.
@@ -125,15 +193,16 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
 
   function completeOnboarding(answers: OnboardingAnswers, language: Language = 'en') {
     const placement = getPlacementFromAnswers(answers);
+    const availableStartWeek = Math.min(placement.startWeek, MAX_AVAILABLE_WEEK);
     setState((current) => ({
       ...current,
       answers,
       onboardingComplete: true,
       placement,
       language: normalizeMainLanguage(language),
-      currentWeekNumber: placement.startWeek,
+      currentWeekNumber: availableStartWeek,
       currentDayNumber: 1,
-      journeyDay: Math.max(1, (placement.startWeek - 1) * 7 + 1),
+      journeyDay: Math.max(1, (availableStartWeek - 1) * 7 + 1),
       trainingTime:
         answers.reminderTime === 'morning'
           ? '8:00 AM'
@@ -142,7 +211,7 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
             : answers.reminderTime === 'custom'
               ? 'Choose later'
               : '7:30 PM',
-      sessionLength: answers.practiceLength === '5' ? '5 minutes' : answers.practiceLength === '20' ? '20 minutes' : '12 minutes',
+      sessionLength: DAILY_SESSION_LENGTH,
     }));
   }
 
@@ -177,12 +246,34 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
     });
   }
 
-  function setTrainingPreference(key: 'trainingTime' | 'notificationTone' | 'sessionLength', value: string) {
+  function setTrainingPreference(key: 'trainingTime' | 'notificationTone', value: string) {
     setState((current) => ({ ...current, [key]: value }));
   }
 
   function setLanguage(language: MainAppLanguage) {
     setState((current) => ({ ...current, language }));
+  }
+
+  const reorderWeekExercise = useCallback((weekNumber: number, fromIndex: number, toIndex: number) => {
+    const week = getWeek(weekNumber);
+
+    setState((current) => ({
+      ...current,
+      exerciseOrdersByWeek: buildNextExerciseOrders(current.exerciseOrdersByWeek, week, weekNumber, fromIndex, toIndex),
+    }));
+  }, []);
+
+  function completeMonthlyTest(month: number) {
+    setState((current) => ({
+      ...current,
+      monthlyTests: {
+        ...current.monthlyTests,
+        [`${month}`]: {
+          status: 'passed',
+          completedAt: new Date().toISOString(),
+        },
+      },
+    }));
   }
 
   const value = useMemo(
@@ -195,8 +286,10 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
       resetPrototype,
       setTrainingPreference,
       setLanguage,
+      reorderWeekExercise,
+      completeMonthlyTest,
     }),
-    [currentWeek, isHydrated, state],
+    [currentWeek, isHydrated, reorderWeekExercise, state],
   );
 
   return <PrototypeContext.Provider value={value}>{children}</PrototypeContext.Provider>;

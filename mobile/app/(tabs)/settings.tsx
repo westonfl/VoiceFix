@@ -1,18 +1,19 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import type { ComponentProps } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { VoiceFixTheme as theme } from '@/constants/theme';
-import { displayPreferenceValue, mainAppLanguageOptions, mainAppText } from '@/features/prototype/localization';
+import { displayPreferenceValue, mainAppLanguageOptions, mainAppText, type MainAppLanguage } from '@/features/prototype/localization';
 import { AnalysisServerError, analyzeMonthOneTake, type MonthOneAnalysisResponse } from '@/features/prototype/serverAnalysis';
 import { usePrototype } from '@/features/prototype/state';
 
 export default function SettingsScreen() {
   const { state, resetPrototype, setLanguage, setTrainingPreference } = usePrototype();
   const router = useRouter();
+  const [languageOpen, setLanguageOpen] = useState(false);
   const text = mainAppText[state.language];
   const selectedLanguage = mainAppLanguageOptions.find((option) => option.id === state.language) ?? mainAppLanguageOptions[0];
 
@@ -27,39 +28,17 @@ export default function SettingsScreen() {
         return;
       }
 
-      let usedCompatibilityFallback = false;
-      let analysis: MonthOneAnalysisResponse;
-
-      try {
-        analysis = await analyzeMonthOneTake({
-          uri: result.assets[0].uri,
-          drillId: 'resonance_vowel',
-          language: state.language,
-          takeKind: 'first',
-        });
-      } catch (error) {
-        if (!(error instanceof AnalysisServerError) || error.status !== 422) {
-          throw error;
-        }
-
-        usedCompatibilityFallback = true;
-        analysis = await analyzeMonthOneTake({
-          uri: result.assets[0].uri,
-          drillId: 'mmm_resonance',
-          language: state.language,
-          takeKind: 'first',
-        });
-      }
+      const analysis: MonthOneAnalysisResponse = await analyzeMonthOneTake({
+        uri: result.assets[0].uri,
+        drillId: 'fah_vah_resonance',
+        language: state.language,
+        takeKind: 'first',
+      });
 
       Alert.alert(
         text.settings.analyzeAudioTitle,
         [
           `${analysis.drillId} · ${analysis.quality}`,
-          usedCompatibilityFallback
-            ? state.language === 'ko'
-              ? '서버가 resonance_vowel을 거부해서 mmm_resonance로 다시 보냈습니다.'
-              : 'Server rejected resonance_vowel, so VoiceFix retried with mmm_resonance.'
-            : null,
           `resonance ${formatDebugMetric(analysis.metrics.resonanceScore)} · forward ${formatDebugMetric(analysis.metrics.forwardEnergyRatio)} · throat ${formatDebugMetric(analysis.metrics.throatEnergyRatio)}`,
           analysis.feedback.whatWeHeard,
           analysis.feedback.oneThingToTry,
@@ -103,7 +82,6 @@ export default function SettingsScreen() {
             icon="timer"
             label={text.settings.sessionLength}
             value={displayPreferenceValue(state.sessionLength, state.language)}
-            onPress={() => setTrainingPreference('sessionLength', state.sessionLength === '12 minutes' ? '5 minutes' : '12 minutes')}
           />
         </View>
 
@@ -119,14 +97,18 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <View style={styles.panel}>
+        <View style={[styles.panel, styles.safetyPanel]}>
           <Text style={styles.panelTitle}>{text.settings.safetyAndData}</Text>
           <SettingRow icon="health-and-safety" label={text.settings.safetyReminder} value={text.settings.safetyReminderValue} />
-          <SettingRow
-            icon="language"
+          <LanguageDropdown
             label={text.settings.language}
-            value={`${selectedLanguage.label} (${selectedLanguage.shortLabel})`}
-            onPress={() => setLanguage(state.language === 'en' ? 'ko' : 'en')}
+            open={languageOpen}
+            selectedLanguage={selectedLanguage}
+            onToggle={() => setLanguageOpen((current) => !current)}
+            onChange={(language) => {
+              setLanguage(language);
+              setLanguageOpen(false);
+            }}
           />
           <SettingRow icon="mic" label={text.settings.audio} value={text.settings.audioValue} />
           <SettingRow icon="upload-file" label={text.settings.analyzeAudioFile} value={text.settings.analyzeAudioFileValue} onPress={analyzePickedAudioFile} />
@@ -144,6 +126,64 @@ export default function SettingsScreen() {
         </Pressable>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function LanguageDropdown({
+  label,
+  open,
+  selectedLanguage,
+  onToggle,
+  onChange,
+}: {
+  label: string;
+  open: boolean;
+  selectedLanguage: (typeof mainAppLanguageOptions)[number];
+  onToggle: () => void;
+  onChange: (language: MainAppLanguage) => void;
+}) {
+  return (
+    <View style={styles.languageDropdown}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        onPress={onToggle}
+        style={[styles.settingRow, open && styles.settingRowOpen]}>
+        <View style={styles.settingIcon}>
+          <MaterialIcons name="language" size={20} color={theme.primaryBright} />
+        </View>
+        <View style={styles.settingCopy}>
+          <Text style={styles.settingLabel}>{label}</Text>
+          <Text style={styles.settingValue}>
+            {selectedLanguage.label} ({selectedLanguage.shortLabel})
+          </Text>
+        </View>
+        <MaterialIcons name={open ? 'expand-less' : 'expand-more'} size={22} color={theme.textSubtle} />
+      </Pressable>
+
+      {open ? (
+        <View style={styles.languageMenu}>
+          <ScrollView nestedScrollEnabled style={styles.languageMenuScroll} showsVerticalScrollIndicator={false}>
+            {mainAppLanguageOptions.map((option) => {
+              const selected = selectedLanguage.id === option.id;
+
+              return (
+                <Pressable
+                  key={option.id}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  onPress={() => onChange(option.id)}
+                  style={[styles.languageMenuItem, selected && styles.languageMenuItemActive]}>
+                  <Text style={styles.languageShortLabel}>{option.shortLabel}</Text>
+                  <Text style={styles.languageName}>{option.label}</Text>
+                  {selected ? <MaterialIcons name="check" size={18} color={theme.primaryBright} /> : null}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -224,6 +264,9 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 16,
   },
+  safetyPanel: {
+    zIndex: 5,
+  },
   panelTitle: {
     color: theme.text,
     fontSize: 20,
@@ -239,6 +282,10 @@ const styles = StyleSheet.create({
     gap: 12,
     minHeight: 68,
     padding: 12,
+  },
+  settingRowOpen: {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
   },
   settingIcon: {
     alignItems: 'center',
@@ -261,6 +308,44 @@ const styles = StyleSheet.create({
     color: theme.textMuted,
     fontSize: 13,
     lineHeight: 18,
+  },
+  languageDropdown: {
+    position: 'relative',
+    zIndex: 2,
+  },
+  languageMenu: {
+    backgroundColor: theme.surface,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    borderColor: 'rgba(184, 199, 211, 0.1)',
+    borderTopWidth: 0,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  languageMenuScroll: {
+    maxHeight: 292,
+  },
+  languageMenuItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 48,
+    paddingHorizontal: 14,
+  },
+  languageMenuItemActive: {
+    backgroundColor: theme.primarySoft,
+  },
+  languageShortLabel: {
+    color: theme.text,
+    fontSize: 13,
+    fontWeight: '800',
+    minWidth: 48,
+  },
+  languageName: {
+    color: theme.text,
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
   },
   graceBox: {
     alignItems: 'flex-start',

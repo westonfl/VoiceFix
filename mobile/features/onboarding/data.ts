@@ -30,11 +30,11 @@ export const onboardingScreens: OnboardingScreen[] = [
     id: 'ONB-02',
     shortTitle: 'Promise',
     kind: 'info',
-    eyebrow: 'Six month commitment',
+    eyebrow: '90-day commitment',
     title: 'Singing is built through small returns.',
-    body: 'VoiceFix is a 180-day training journey. You will not prove your talent in one session; you will show up, record honestly, fix one small thing, and return tomorrow.',
-    primaryAction: 'Start the 6-month journey',
-    bullets: ['A fixed 24-week path', 'One monthly grace day', 'One retry every session'],
+    body: 'VoiceFix is a 90-day training journey. You will not prove your talent in one session; you will show up, record honestly, fix one small thing, and return tomorrow.',
+    primaryAction: 'Start the 3-month journey',
+    bullets: ['A fixed 12-week path', 'One monthly grace day', 'One retry every session'],
   },
   {
     id: 'ONB-03',
@@ -198,10 +198,7 @@ export const onboardingScreens: OnboardingScreen[] = [
     primaryAction: 'Continue',
     dataKey: 'practiceLength',
     options: [
-      { id: '5', label: '5 minutes most days', detail: 'Short checks and one retry.', icon: 'timer' },
-      { id: '10', label: '10-12 minutes', detail: 'Three drills, one retry each.', icon: 'calendar-today' },
-      { id: '20', label: '20 minutes', detail: 'More repetitions and journal depth.', icon: 'all-inclusive' },
-      { id: 'unsure', label: 'I am not sure yet', detail: 'Start small and adjust later.', icon: 'help-outline' },
+      { id: '10', label: '10 minutes every day', detail: 'Three drills in a fixed 10-minute loop.', icon: 'calendar-today' },
     ],
   },
   {

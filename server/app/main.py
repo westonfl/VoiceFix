@@ -17,7 +17,16 @@ from .models import DrillId, Language, MonthOneAnalysisResponse, TakeKind
 
 logger = logging.getLogger("uvicorn.error")
 app = FastAPI(title="VoiceFix Analysis Server", version="0.1.0")
-SUPPORTED_DRILLS = ["soft_hiss", "gentle_hum", "mmm_resonance", "hum_to_ah", "short_tone", "resonance_vowel"]
+SUPPORTED_DRILLS = [
+    "sustained_hiss",
+    "gentle_hum",
+    "soft_hum_start",
+    "mmm_resonance",
+    "fah_vah_resonance",
+    "hum_to_ah",
+    "short_tone_hold",
+]
+LEGACY_DRILL_ALIASES = ["soft_hiss", "resonance_vowel", "short_tone"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,13 +48,13 @@ def json_response_with_cors(status_code: int, content: dict[str, object]) -> JSO
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     logger.warning("validation_error path=%s errors=%s", request.url.path, exc.errors())
-    return json_response_with_cors(status_code=422, content={"detail": exc.errors(), "supportedDrills": SUPPORTED_DRILLS})
+    return json_response_with_cors(status_code=422, content={"detail": exc.errors(), "supportedDrills": SUPPORTED_DRILLS, "legacyAliases": LEGACY_DRILL_ALIASES})
 
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     logger.warning("http_error path=%s status=%s detail=%s", request.url.path, exc.status_code, exc.detail)
-    return json_response_with_cors(status_code=exc.status_code, content={"detail": exc.detail, "supportedDrills": SUPPORTED_DRILLS})
+    return json_response_with_cors(status_code=exc.status_code, content={"detail": exc.detail, "supportedDrills": SUPPORTED_DRILLS, "legacyAliases": LEGACY_DRILL_ALIASES})
 
 
 @app.exception_handler(Exception)
@@ -53,7 +62,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     logger.exception("server_error path=%s", request.url.path)
     return json_response_with_cors(
         status_code=500,
-        content={"detail": "Internal server error. Check Railway logs for server_error.", "supportedDrills": SUPPORTED_DRILLS},
+        content={"detail": "Internal server error. Check Railway logs for server_error.", "supportedDrills": SUPPORTED_DRILLS, "legacyAliases": LEGACY_DRILL_ALIASES},
     )
 
 
@@ -64,6 +73,7 @@ def health() -> dict[str, object]:
         "service": "voicefix-analysis-server",
         "version": app.version,
         "supportedDrills": SUPPORTED_DRILLS,
+        "legacyAliases": LEGACY_DRILL_ALIASES,
         "ffmpegAvailable": shutil.which("ffmpeg") is not None,
     }
 

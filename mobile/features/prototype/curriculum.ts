@@ -1,12 +1,30 @@
 import type { OnboardingAnswers } from '@/features/onboarding/types';
 
+import type { MonthOneDrillId } from './serverAnalysis';
+
 export type CurriculumPhase = 'foundation' | 'control' | 'songs';
+
+export const TOTAL_JOURNEY_DAYS = 90;
+export const TOTAL_CURRICULUM_WEEKS = 12;
+export const DAYS_PER_WEEK = 7;
 
 export type DailySession = {
   day: number;
   role: string;
   focus: string;
   drill: string;
+  analysisDrillId?: MonthOneDrillId;
+};
+
+export type CurriculumExercise = {
+  id: string;
+  title: string;
+  category: 'breathing' | 'tone' | 'resonance' | 'integration';
+  goal: string;
+  instruction: string;
+  analysisDrillId: MonthOneDrillId;
+  visual: 'sustain' | 'pulse' | 'flat' | 'arc' | 'rise' | 'fall' | 'wave';
+  locked?: boolean;
 };
 
 export type CurriculumWeek = {
@@ -14,6 +32,7 @@ export type CurriculumWeek = {
   weekNumber: number;
   title: string;
   goal: string;
+  exercises: CurriculumExercise[];
   coreExercises: string[];
   dailySessions: DailySession[];
   checkpoint: string;
@@ -29,23 +48,90 @@ export type PlacementResult = {
   reason: string;
 };
 
-const weekPattern = [
-  { role: 'Baseline', focus: 'Record the current version', drill: 'First take' },
-  { role: 'Stabilize', focus: 'Repeat the easiest version', drill: 'Small cue' },
-  { role: 'Clarify', focus: 'Add one technical detail', drill: 'Focused take' },
-  { role: 'Retry', focus: 'Repeat and compare', drill: 'Same drill' },
-  { role: 'Apply', focus: 'Use it in a tiny musical pattern', drill: 'Application take' },
-  { role: 'Review', focus: 'Compare first and latest takes', drill: 'Best take' },
-  { role: 'Checkpoint', focus: 'Recover, reflect, or advance', drill: 'Gentle check' },
+function repeatWeeklySession(session: Omit<DailySession, 'day'>): DailySession[] {
+  return Array.from({ length: DAYS_PER_WEEK }, (_, index) => ({
+    ...session,
+    day: index + 1,
+  }));
+}
+
+const weekOneExercises: CurriculumExercise[] = [
+  {
+    id: 'sustained-hiss',
+    title: 'Sustained Hiss',
+    category: 'breathing',
+    goal: 'Release a steady stream of air without pushing.',
+    instruction: 'Inhale quietly, then make a soft hiss that stays even from start to finish.',
+    analysisDrillId: 'sustained_hiss',
+    visual: 'sustain',
+  },
 ];
 
-function sessionsFor(exercise: string): DailySession[] {
-  return weekPattern.map((item, index) => ({
-    day: index + 1,
-    role: item.role,
-    focus: item.focus,
-    drill: `${exercise} - ${item.drill}`,
-  }));
+const weekTwoExercises: CurriculumExercise[] = [
+  {
+    id: 'gentle-hum',
+    title: 'Gentle Hum',
+    category: 'tone',
+    goal: 'Start a tiny hum without throat pressure.',
+    instruction: 'Hum quietly on one comfortable pitch and stop before it feels pressed.',
+    analysisDrillId: 'gentle_hum',
+    visual: 'flat',
+  },
+  {
+    id: 'soft-hum-start',
+    title: 'Soft Hum Start',
+    category: 'tone',
+    goal: 'Begin sound cleanly without a hard attack.',
+    instruction: 'Let the hum appear gently after the breath; avoid grabbing the first moment.',
+    analysisDrillId: 'soft_hum_start',
+    visual: 'pulse',
+  },
+];
+
+const weekThreeExercises: CurriculumExercise[] = [
+  {
+    id: 'mmm-resonance',
+    title: 'Mmm Resonance',
+    category: 'resonance',
+    goal: 'Find an easy buzz without pressing for volume.',
+    instruction: 'Use a small mmm and notice whether it feels easier in the lips or face.',
+    analysisDrillId: 'mmm_resonance',
+    visual: 'arc',
+  },
+  {
+    id: 'fah-vah-resonance',
+    title: 'Fah / Vah Resonance',
+    category: 'resonance',
+    goal: 'Keep the same easy resonance on a gentle consonant-vowel.',
+    instruction: 'Speak-sing fah or vah softly, keeping it light and unforced.',
+    analysisDrillId: 'fah_vah_resonance',
+    visual: 'wave',
+  },
+];
+
+const weekFourExercises: CurriculumExercise[] = [
+  {
+    id: 'hum-to-ah',
+    title: 'Hum to Ah',
+    category: 'integration',
+    goal: 'Open from hum to ah without losing ease.',
+    instruction: 'Start with a gentle hum, then open to ah while keeping the same calm airflow.',
+    analysisDrillId: 'hum_to_ah',
+    visual: 'rise',
+  },
+  {
+    id: 'short-tone',
+    title: 'Short Tone Hold',
+    category: 'integration',
+    goal: 'Hold a short sound comfortably and finish cleanly.',
+    instruction: 'Sing one easy pitch for 3-5 seconds, then release without squeezing.',
+    analysisDrillId: 'short_tone_hold',
+    visual: 'sustain',
+  },
+];
+
+function coreTitles(exercises: CurriculumExercise[]) {
+  return exercises.map((exercise) => exercise.title);
 }
 
 export const curriculum: CurriculumWeek[] = [
@@ -54,8 +140,14 @@ export const curriculum: CurriculumWeek[] = [
     weekNumber: 1,
     title: 'Breath Awareness',
     goal: 'Feel steady outgoing air without pushing.',
-    coreExercises: ['Quiet inhale', 'Soft hiss', '5-second air release'],
-    dailySessions: sessionsFor('Soft hiss'),
+    exercises: weekOneExercises,
+    coreExercises: coreTitles(weekOneExercises),
+    dailySessions: repeatWeeklySession({
+      role: 'Breath practice',
+      focus: 'Record each breath exercise and compare the retry.',
+      drill: 'Sustained Hiss',
+      analysisDrillId: 'sustained_hiss',
+    }),
     checkpoint: 'Can you release air without pushing?',
     tags: ['breath', 'airflow', 'foundation'],
     difficulty: 1,
@@ -66,8 +158,14 @@ export const curriculum: CurriculumWeek[] = [
     weekNumber: 2,
     title: 'Gentle Sound',
     goal: 'Introduce sound without throat pressure.',
-    coreExercises: ['Soft hum', 'Gentle mm', 'Comfort check'],
-    dailySessions: sessionsFor('Gentle hum'),
+    exercises: weekTwoExercises,
+    coreExercises: coreTitles(weekTwoExercises),
+    dailySessions: repeatWeeklySession({
+      role: 'Gentle sound practice',
+      focus: 'Record each gentle sound exercise and keep it small.',
+      drill: 'Gentle Hum',
+      analysisDrillId: 'gentle_hum',
+    }),
     checkpoint: 'Can you make a small sound without strain?',
     tags: ['hum', 'gentle', 'foundation'],
     difficulty: 1,
@@ -78,8 +176,14 @@ export const curriculum: CurriculumWeek[] = [
     weekNumber: 3,
     title: 'Resonance Exploration',
     goal: 'Explore easier vibration and reduce throat-heavy sound.',
-    coreExercises: ['Mmm', 'Nnn', 'Ng', 'Mmm-ah'],
-    dailySessions: sessionsFor('Mmm-ah resonance'),
+    exercises: weekThreeExercises,
+    coreExercises: coreTitles(weekThreeExercises),
+    dailySessions: repeatWeeklySession({
+      role: 'Resonance practice',
+      focus: 'Record each resonance exercise without pressing for buzz.',
+      drill: 'Mmm Resonance',
+      analysisDrillId: 'mmm_resonance',
+    }),
     checkpoint: 'Can you find an easier, less throat-heavy sound?',
     tags: ['resonance', 'hum', 'foundation'],
     difficulty: 1,
@@ -90,8 +194,14 @@ export const curriculum: CurriculumWeek[] = [
     weekNumber: 4,
     title: 'Breath + Resonance Integration',
     goal: 'Combine steady air, gentle sound, and resonance into short controlled tones.',
-    coreExercises: ['Hiss to hum', 'Hum to ah', '3-5 second tone'],
-    dailySessions: sessionsFor('Hum to ah'),
+    exercises: weekFourExercises,
+    coreExercises: coreTitles(weekFourExercises),
+    dailySessions: repeatWeeklySession({
+      role: 'Integration practice',
+      focus: 'Record each integration exercise and keep the release clean.',
+      drill: 'Hum to Ah',
+      analysisDrillId: 'hum_to_ah',
+    }),
     checkpoint: 'Can you hold a short sound comfortably?',
     tags: ['breath', 'resonance', 'integration'],
     difficulty: 2,
@@ -102,8 +212,9 @@ export const curriculum: CurriculumWeek[] = [
     weekNumber: 5,
     title: 'Onset Control',
     goal: 'Begin sound cleanly without forcing or collapsing.',
+    exercises: [],
     coreExercises: ['Silent breath to hum', 'Soft ah start', 'Hum to vowel start'],
-    dailySessions: sessionsFor('Soft ah onset'),
+    dailySessions: repeatWeeklySession({ role: 'Coming soon', focus: 'Month 2 is locked for now.', drill: 'Coming soon' }),
     checkpoint: 'Can you begin sound without forcing it?',
     tags: ['onset', 'control'],
     difficulty: 2,
@@ -114,8 +225,9 @@ export const curriculum: CurriculumWeek[] = [
     weekNumber: 6,
     title: 'Endings and Release',
     goal: 'Keep endings from fading, squeezing, or dropping.',
+    exercises: [],
     coreExercises: ['3-5 second tone ending', 'Gentle release', 'Ma-ma pattern'],
-    dailySessions: sessionsFor('Tone ending'),
+    dailySessions: repeatWeeklySession({ role: 'Coming soon', focus: 'Month 2 is locked for now.', drill: 'Coming soon' }),
     checkpoint: 'Can the ending stay alive?',
     tags: ['endings', 'release', 'control'],
     difficulty: 2,
@@ -126,8 +238,9 @@ export const curriculum: CurriculumWeek[] = [
     weekNumber: 7,
     title: 'Single Pitch Matching',
     goal: 'Match one comfortable reference pitch.',
+    exercises: [],
     coreExercises: ['Listen to note', 'Hum target', 'Open to vowel'],
-    dailySessions: sessionsFor('Reference tone match'),
+    dailySessions: repeatWeeklySession({ role: 'Coming soon', focus: 'Month 2 is locked for now.', drill: 'Coming soon' }),
     checkpoint: 'Can you find one note more reliably?',
     tags: ['pitch', 'match', 'control'],
     difficulty: 2,
@@ -138,56 +251,35 @@ export const curriculum: CurriculumWeek[] = [
     weekNumber: 8,
     title: 'Pitch Stability',
     goal: 'Keep pitch from drifting after you find it.',
+    exercises: [],
     coreExercises: ['Sustained target note', 'Stability bands', 'Short repeats'],
-    dailySessions: sessionsFor('Pitch hold'),
+    dailySessions: repeatWeeklySession({ role: 'Coming soon', focus: 'Month 2 is locked for now.', drill: 'Coming soon' }),
     checkpoint: 'Can you hold the target more steadily?',
     tags: ['pitch', 'stability'],
     difficulty: 3,
     safetyRules: ['stay_comfortable_range'],
   },
   {
-    phase: 'control',
+    phase: 'songs',
     weekNumber: 9,
-    title: 'Two-Note Movement',
-    goal: 'Move between two nearby notes without losing ease.',
-    coreExercises: ['Do-re echo', 'Hum two notes', 'Ma-ma step'],
-    dailySessions: sessionsFor('Two-note echo'),
-    checkpoint: 'Can you move without grabbing?',
-    tags: ['interval', 'movement'],
+    title: 'Two-Note and Three-Note Movement',
+    goal: 'Move through tiny melodic shapes without losing ease.',
+    exercises: [],
+    coreExercises: ['Do-re echo', 'Three-note echo', 'Ma-ma step'],
+    dailySessions: repeatWeeklySession({ role: 'Coming soon', focus: 'Month 3 is locked for now.', drill: 'Coming soon' }),
+    checkpoint: 'Can you move through a small shape without grabbing?',
+    tags: ['interval', 'movement', 'song'],
     difficulty: 3,
     safetyRules: ['slow_if_tense'],
   },
   {
-    phase: 'control',
+    phase: 'songs',
     weekNumber: 10,
-    title: 'Three-Note Echo',
-    goal: 'Sing a tiny melodic shape.',
-    coreExercises: ['Three-note echo', 'Up/down pattern', 'Hardest note retry'],
-    dailySessions: sessionsFor('Three-note echo'),
-    checkpoint: 'Can you echo a tiny melody?',
-    tags: ['melody', 'echo'],
-    difficulty: 3,
-    safetyRules: ['slow_if_tense'],
-  },
-  {
-    phase: 'control',
-    weekNumber: 11,
-    title: 'Timing and Rhythm Basics',
-    goal: 'Keep a simple vocal pattern in time.',
-    coreExercises: ['Clap/listen/sing', 'Two-beat pattern', 'Even syllables'],
-    dailySessions: sessionsFor('Two-beat vocal pattern'),
-    checkpoint: 'Can you wait for the beat?',
-    tags: ['timing', 'rhythm'],
-    difficulty: 3,
-    safetyRules: ['keep_volume_easy'],
-  },
-  {
-    phase: 'control',
-    weekNumber: 12,
-    title: 'First Singing Phrase',
-    goal: 'Apply breath, resonance, pitch, and timing to a very short phrase.',
+    title: 'Phrase Control',
+    goal: 'Apply breath, resonance, pitch, and timing to very short phrases.',
+    exercises: [],
     coreExercises: ['3-5 note phrase', 'Neutral syllable phrase', 'Simple lyric phrase'],
-    dailySessions: sessionsFor('Tiny phrase'),
+    dailySessions: repeatWeeklySession({ role: 'Coming soon', focus: 'Month 3 is locked for now.', drill: 'Coming soon' }),
     checkpoint: 'Can you keep a short phrase recognizable and comfortable?',
     tags: ['phrase', 'singing'],
     difficulty: 4,
@@ -195,11 +287,12 @@ export const curriculum: CurriculumWeek[] = [
   },
   {
     phase: 'songs',
-    weekNumber: 13,
-    title: 'Song Phrase Setup',
-    goal: 'Prepare before a real phrase.',
+    weekNumber: 11,
+    title: 'Simple Song Practice',
+    goal: 'Prepare and repeat one easy song phrase with the same feedback loop.',
+    exercises: [],
     coreExercises: ['Choose easy phrase', 'Hum phrase shape', 'Sing with lyric'],
-    dailySessions: sessionsFor('Song phrase setup'),
+    dailySessions: repeatWeeklySession({ role: 'Coming soon', focus: 'Month 3 is locked for now.', drill: 'Coming soon' }),
     checkpoint: 'Can you prepare before singing?',
     tags: ['song', 'phrase'],
     difficulty: 4,
@@ -207,131 +300,12 @@ export const curriculum: CurriculumWeek[] = [
   },
   {
     phase: 'songs',
-    weekNumber: 14,
-    title: 'Phrase Endings in Songs',
-    goal: 'Keep the ends of words and phrases alive.',
-    coreExercises: ['Last syllable sustain', 'Softer start', 'Phrase exit comparison'],
-    dailySessions: sessionsFor('Song ending'),
-    checkpoint: 'Can the last word stay present?',
-    tags: ['song', 'endings'],
-    difficulty: 4,
-    safetyRules: ['avoid_squeezing'],
-  },
-  {
-    phase: 'songs',
-    weekNumber: 15,
-    title: 'Vowels and Tone Consistency',
-    goal: 'Keep tone from changing wildly between vowels.',
-    coreExercises: ['Ma-me-mi-mo-mu', 'Lyric vowel isolation', 'Hum to vowel'],
-    dailySessions: sessionsFor('Vowel line'),
-    checkpoint: 'Can vowels stay connected?',
-    tags: ['vowels', 'tone'],
-    difficulty: 4,
-    safetyRules: ['keep_jaw_easy'],
-  },
-  {
-    phase: 'songs',
-    weekNumber: 16,
-    title: 'Reference Fading',
-    goal: 'Reduce dependency on the app guide tone.',
-    coreExercises: ['Listen and sing', 'Delayed reference', 'Sing first, check after'],
-    dailySessions: sessionsFor('Faded reference'),
-    checkpoint: 'Can you sing a short phrase with less guidance?',
-    tags: ['reference', 'independence'],
-    difficulty: 4,
-    safetyRules: ['return_to_reference_if_lost'],
-  },
-  {
-    phase: 'songs',
-    weekNumber: 17,
-    title: 'Comfortable Range Expansion',
-    goal: 'Expand range carefully without pushing.',
-    coreExercises: ['Small upward patterns', 'Comfort check', 'Transpose phrase'],
-    dailySessions: sessionsFor('Small range step'),
-    checkpoint: 'Can you climb without force?',
-    tags: ['range', 'comfort'],
-    difficulty: 5,
-    safetyRules: ['stop_if_pain', 'lower_key_if_tense'],
-  },
-  {
-    phase: 'songs',
-    weekNumber: 18,
-    title: 'Dynamics',
-    goal: 'Sing softer and louder without losing control.',
-    coreExercises: ['Soft-to-medium tone', 'Medium-to-soft phrase', 'Quiet carrying sound'],
-    dailySessions: sessionsFor('Dynamic phrase'),
-    checkpoint: 'Can volume change without collapse?',
-    tags: ['dynamics', 'expression'],
-    difficulty: 5,
-    safetyRules: ['avoid_shouting'],
-  },
-  {
-    phase: 'songs',
-    weekNumber: 19,
-    title: 'Expression and Meaning',
-    goal: 'Add musical intention without sacrificing technique.',
-    coreExercises: ['Speak phrase', 'Hum phrase', 'Sing with one intention'],
-    dailySessions: sessionsFor('Expressive phrase'),
-    checkpoint: 'Can the phrase mean something and stay easy?',
-    tags: ['expression', 'meaning'],
-    difficulty: 5,
-    safetyRules: ['keep_technique_first'],
-  },
-  {
-    phase: 'songs',
-    weekNumber: 20,
-    title: 'Consistency Across Takes',
-    goal: 'Make good takes repeatable.',
-    coreExercises: ['Same phrase three times', 'Identify best take', 'Repeat best setup'],
-    dailySessions: sessionsFor('Consistent phrase'),
-    checkpoint: 'Are good takes becoming less accidental?',
-    tags: ['consistency', 'takes'],
-    difficulty: 5,
-    safetyRules: ['rest_if_fatigued'],
-  },
-  {
-    phase: 'songs',
-    weekNumber: 21,
-    title: 'Verse Section',
-    goal: 'Train a longer but manageable section.',
-    coreExercises: ['Split verse', 'Train each phrase', 'Combine phrases'],
-    dailySessions: sessionsFor('Verse section'),
-    checkpoint: 'Can two phrases connect?',
-    tags: ['verse', 'section'],
-    difficulty: 5,
-    safetyRules: ['split_if_tired'],
-  },
-  {
-    phase: 'songs',
-    weekNumber: 22,
-    title: 'Chorus or Peak Phrase',
-    goal: 'Handle the most demanding phrase without pushing.',
-    coreExercises: ['Identify peak note', 'Sing softer through peak', 'Transpose if needed'],
-    dailySessions: sessionsFor('Peak phrase'),
-    checkpoint: 'Can the peak stay comfortable?',
-    tags: ['chorus', 'peak'],
-    difficulty: 6,
-    safetyRules: ['transpose_if_needed', 'stop_if_pain'],
-  },
-  {
-    phase: 'songs',
-    weekNumber: 23,
-    title: 'Full Short Song Take',
-    goal: 'Record a short full take or complete selected section.',
-    coreExercises: ['Warm-up', 'Phrase reminders', 'Full take', 'One fix'],
-    dailySessions: sessionsFor('Full section take'),
-    checkpoint: 'Can you improve one thing across two full takes?',
-    tags: ['full_take', 'song'],
-    difficulty: 6,
-    safetyRules: ['rest_between_takes'],
-  },
-  {
-    phase: 'songs',
-    weekNumber: 24,
-    title: 'Final Comparison and Next Plan',
-    goal: 'Compare earliest recordings to current singing and choose the next path.',
-    coreExercises: ['Replay baseline', 'Record final section', 'Choose next focus'],
-    dailySessions: sessionsFor('Final comparison'),
+    weekNumber: 12,
+    title: 'Final Song Comparison',
+    goal: 'Compare earliest recordings to a short current song phrase and choose the next path.',
+    exercises: [],
+    coreExercises: ['Replay baseline', 'Record final phrase', 'Choose next focus'],
+    dailySessions: repeatWeeklySession({ role: 'Coming soon', focus: 'Month 3 is locked for now.', drill: 'Coming soon' }),
     checkpoint: 'What changed, and what should you train next?',
     tags: ['checkpoint', 'next_plan'],
     difficulty: 6,
@@ -409,9 +383,9 @@ export function getPlacementFromAnswers(answers: OnboardingAnswers): PlacementRe
 
   if (advanced) {
     return {
-      startWeek: 12,
-      emphasis: ['Short phrase control', 'Song setup', 'Weekly foundation review'],
-      reason: 'Your background suggests you can begin near the first phrase checkpoint while keeping a foundation drill in rotation.',
+      startWeek: 9,
+      emphasis: ['Tiny melody movement', 'Song setup', 'Weekly foundation review'],
+      reason: 'Your background suggests you can begin near the song application block while keeping a foundation drill in rotation.',
     };
   }
 
