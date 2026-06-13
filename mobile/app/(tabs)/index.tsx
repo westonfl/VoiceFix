@@ -8,15 +8,15 @@ import {
 } from 'expo-audio';
 import type { ComponentProps } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, AppState, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { VoiceFixTheme as theme } from '@/constants/theme';
 import { OnboardingFlow } from '@/features/onboarding/OnboardingFlow';
 import { SignalWave } from '@/features/onboarding/components';
 import { buildMvpFeedback, compareTakes, formatDuration } from '@/features/prototype/analysis';
-import { curriculum, getWeek, TOTAL_JOURNEY_DAYS, type CurriculumExercise } from '@/features/prototype/curriculum';
-import { displaySessionText, displayWeek, mainAppText } from '@/features/prototype/localization';
+import { curriculum, getWeek, type CurriculumExercise } from '@/features/prototype/curriculum';
+import { displaySessionText, displayWeek, mainAppText, type MainAppLanguage } from '@/features/prototype/localization';
 import { analyzeMonthOneTake, type MonthOneAnalysisResponse } from '@/features/prototype/serverAnalysis';
 import { usePrototype } from '@/features/prototype/state';
 
@@ -49,7 +49,7 @@ function orderExercises(exercises: string[], savedOrder?: string[]) {
 }
 
 export default function TodayScreen() {
-  const { state, isHydrated, completeOnboarding, completeSession, reorderWeekExercise } = usePrototype();
+  const { state, isHydrated, completeOnboarding, reorderWeekExercise } = usePrototype();
   const audioRecorder = useAudioRecorder(RecordingPresets.LOW_QUALITY);
   const recorderState = useAudioRecorderState(audioRecorder);
   const [sessionStep, setSessionStep] = useState<SessionStep>('intro');
@@ -64,8 +64,6 @@ export default function TodayScreen() {
   const [analysisPending, setAnalysisPending] = useState(false);
   const [analysisSource, setAnalysisSource] = useState<'server' | 'fallback' | null>(null);
   const [goalModalVisible, setGoalModalVisible] = useState(false);
-  const [activeTrainingMs, setActiveTrainingMs] = useState(0);
-  const [completionMessage, setCompletionMessage] = useState<string | null>(null);
   const [activeExerciseIndex, setActiveExerciseIndex] = useState(0);
   const [completedExerciseIds, setCompletedExerciseIds] = useState<string[]>([]);
   const [completedRecordedMs, setCompletedRecordedMs] = useState(0);
@@ -96,15 +94,16 @@ export default function TodayScreen() {
   const currentExercise = todayExerciseCards[activeExerciseIndex] ?? todayExerciseCards[0];
   const dailyGoalTotal = todayExerciseCards.length;
   const currentExercisePairComplete = Boolean(firstTake && retryTake);
-  const pendingCompletedCount = completedExerciseIds.includes(currentExercise?.id ?? '') || !currentExercisePairComplete ? 0 : 1;
-  const dailyGoalCompleted = state.completedToday ? dailyGoalTotal : Math.min(dailyGoalTotal, completedExerciseIds.length + pendingCompletedCount);
+  const currentExerciseAlreadyCompleted = completedExerciseIds.includes(currentExercise?.id ?? '');
+  const pendingCompletedCount = currentExercisePairComplete && !currentExerciseAlreadyCompleted ? 1 : 0;
+  const dailyGoalCompleted = Math.min(dailyGoalTotal, completedExerciseIds.length + pendingCompletedCount);
   const savedTodayClip = state.savedClips.find((clip) => clip.weekNumber === displayedWeek.weekNumber && clip.dayNumber === state.currentDayNumber);
   const currentRecordedMs = (firstTake?.durationMs ?? 0) + (retryTake?.durationMs ?? 0);
   const recordedPracticeMs = completedRecordedMs + (completedExerciseIds.includes(currentExercise?.id ?? '') ? 0 : currentRecordedMs);
-  const displayedGoalRecordedMs = savedTodayClip?.recordedPracticeMs ?? recordedPracticeMs;
+  const displayedGoalRecordedMs = Math.max(savedTodayClip?.recordedPracticeMs ?? 0, recordedPracticeMs);
   const allExercisesRecorded = dailyGoalCompleted >= dailyGoalTotal && dailyGoalTotal > 0;
-  const allGoalTargetsAchieved = state.completedToday || (allExercisesRecorded && displayedGoalRecordedMs >= DAILY_RECORDED_TARGET_MS);
-  const dailyCompletionReady = allExercisesRecorded && recordedPracticeMs >= DAILY_RECORDED_TARGET_MS;
+  const allGoalTargetsAchieved = allExercisesRecorded && displayedGoalRecordedMs >= DAILY_RECORDED_TARGET_MS;
+  const firstIncompleteExerciseIndex = todayExerciseCards.findIndex((exercise) => !completedExerciseIds.includes(exercise.id));
   const fallbackFeedback = useMemo(() => buildMvpFeedback(firstTake ?? { durationMs: 0 }, state.language), [firstTake, state.language]);
   const feedback = firstAnalysis
     ? {
@@ -141,32 +140,6 @@ export default function TodayScreen() {
   useEffect(() => {
     setSelectedWeekNumber(state.currentWeekNumber);
   }, [state.currentWeekNumber]);
-
-  useEffect(() => {
-    if (!sessionOpen) {
-      return;
-    }
-
-    let lastTick = Date.now();
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      lastTick = Date.now();
-      if (nextState !== 'active') {
-        setCompletionMessage(null);
-      }
-    });
-    const interval = setInterval(() => {
-      const now = Date.now();
-      if (AppState.currentState === 'active') {
-        setActiveTrainingMs((current) => current + now - lastTick);
-      }
-      lastTick = now;
-    }, 1000);
-
-    return () => {
-      clearInterval(interval);
-      subscription.remove();
-    };
-  }, [sessionOpen]);
 
   if (!isHydrated) {
     return (
@@ -243,6 +216,17 @@ export default function TodayScreen() {
         void analyzeFirstTake(recordedTake);
       } else {
         setRetryTake(recordedTake);
+        if (currentExercise) {
+          const exerciseRecordedMs = (firstTake?.durationMs ?? 0) + recordedTake.durationMs;
+          setCompletedExerciseIds((current) => {
+            if (current.includes(currentExercise.id)) {
+              return current;
+            }
+
+            setCompletedRecordedMs((recordedMs) => recordedMs + exerciseRecordedMs);
+            return [...current, currentExercise.id];
+          });
+        }
         await analyzeRetryTake(recordedTake);
         setSessionStep('summary');
       }
@@ -257,95 +241,36 @@ export default function TodayScreen() {
   function startTrainingSession() {
     setSessionOpen(true);
     setSessionStep('intro');
-    setActiveExerciseIndex(0);
-    setCompletedExerciseIds([]);
-    setCompletedRecordedMs(0);
+    setActiveExerciseIndex(firstIncompleteExerciseIndex >= 0 ? firstIncompleteExerciseIndex : 0);
     setFirstTake(null);
     setRetryTake(null);
     setFirstAnalysis(null);
     setRetryAnalysis(null);
     setAnalysisSource(null);
-    setCompletionMessage(null);
-    setActiveTrainingMs(0);
   }
 
   function closeTrainingSession() {
     setSessionOpen(false);
     setSessionStep('intro');
-    setActiveExerciseIndex(0);
-    setCompletedExerciseIds([]);
-    setCompletedRecordedMs(0);
     setFirstTake(null);
     setRetryTake(null);
     setFirstAnalysis(null);
     setRetryAnalysis(null);
     setAnalysisSource(null);
-    setCompletionMessage(null);
-    setActiveTrainingMs(0);
   }
 
-  function completeTrainingIfReady() {
-    if (!currentExercise) {
-      setCompletionMessage(state.language === 'ko' ? '오늘 사용할 수 있는 훈련이 없습니다.' : 'No exercise is available for today.');
-      return;
-    }
-
-    const currentAlreadyCompleted = completedExerciseIds.includes(currentExercise.id);
-    const nextCompletedIds = currentExercisePairComplete && !currentAlreadyCompleted
-      ? [...completedExerciseIds, currentExercise.id]
-      : completedExerciseIds;
-    const nextRecordedPracticeMs = currentExercisePairComplete && !currentAlreadyCompleted
-      ? completedRecordedMs + currentRecordedMs
-      : recordedPracticeMs;
-    const nextExerciseIndex = activeExerciseIndex + 1;
-
-    if (!currentExercisePairComplete) {
-      setCompletionMessage(state.language === 'ko' ? '이 훈련의 첫 테이크와 재시도를 모두 녹음해야 합니다.' : 'Record the first take and retry for this exercise.');
-      return;
-    }
-
-    if (nextExerciseIndex < todayExerciseCards.length && !currentAlreadyCompleted) {
-      setCompletedExerciseIds(nextCompletedIds);
-      setCompletedRecordedMs(nextRecordedPracticeMs);
-      setActiveExerciseIndex(nextExerciseIndex);
+  function continueAfterSummary() {
+    if (firstIncompleteExerciseIndex >= 0) {
+      setActiveExerciseIndex(firstIncompleteExerciseIndex);
+      setSessionStep('intro');
       setFirstTake(null);
       setRetryTake(null);
       setFirstAnalysis(null);
       setRetryAnalysis(null);
       setAnalysisSource(null);
-      setCompletionMessage(null);
-      setSessionStep('intro');
       return;
     }
 
-    const allNextExercisesRecorded = nextCompletedIds.length >= dailyGoalTotal && dailyGoalTotal > 0;
-    const nextDailyCompletionReady = allNextExercisesRecorded && nextRecordedPracticeMs >= DAILY_RECORDED_TARGET_MS;
-
-    if (!nextDailyCompletionReady) {
-      const missingRecordedMs = Math.max(0, DAILY_RECORDED_TARGET_MS - nextRecordedPracticeMs);
-      const pieces = [
-        !allNextExercisesRecorded ? state.language === 'ko' ? '모든 훈련의 첫 테이크와 재시도를 녹음해야 합니다.' : 'Record first take and retry for every exercise.' : null,
-        missingRecordedMs > 0 ? state.language === 'ko' ? `녹음 시간이 ${formatTimer(missingRecordedMs)} 더 필요합니다.` : `Record ${formatTimer(missingRecordedMs)} more audio.` : null,
-      ].filter(Boolean);
-      setCompletionMessage(pieces.join(' '));
-      return;
-    }
-
-    const comparisonText = retryAnalysis?.comparison?.summary ?? (firstTake && retryTake ? compareTakes(firstTake, retryTake, state.language) : text.today.savedFallback);
-    completeSession({
-      title: `${displayedWeek.title} - ${currentExercise.title}`,
-      firstTakeUri: firstTake?.uri,
-      retryTakeUri: retryTake?.uri,
-      firstDurationMs: firstTake?.durationMs ?? 0,
-      retryDurationMs: retryTake?.durationMs ?? 0,
-      activeTrainingMs,
-      recordedPracticeMs: nextRecordedPracticeMs,
-      dailyGoalMet: true,
-      observation: feedback.observation,
-      comparison: comparisonText,
-      createdAt: new Date().toISOString(),
-      analysisMetrics: retryAnalysis?.metrics ?? firstAnalysis?.metrics,
-    });
     closeTrainingSession();
   }
 
@@ -453,9 +378,10 @@ export default function TodayScreen() {
           {sessionStep === 'feedback' ? (
             <View style={styles.stack}>
               <Text style={styles.title}>{text.today.oneThing}</Text>
-              {analysisPending ? <Text style={styles.body}>{text.settings.waitingForAnalysis}</Text> : null}
-              {firstAnalysis ? (
-                <AnalysisPanel analysis={firstAnalysis} title={text.settings.firstAnalysisTitle} text={text} />
+              {analysisPending ? (
+                <AnalysisLoadingState message={text.settings.waitingForAnalysis} language={state.language} />
+              ) : firstAnalysis ? (
+                <AnalysisPanel analysis={firstAnalysis} title={text.settings.firstAnalysisTitle} text={text} language={state.language} />
               ) : (
                 <>
                   <FeedbackBlock label={text.today.whatWeHeard} detail={feedback.observation} />
@@ -463,8 +389,8 @@ export default function TodayScreen() {
                   <FeedbackBlock label={text.today.oneFix} detail={feedback.cue} />
                 </>
               )}
-              {analysisSource === 'fallback' ? <Text style={styles.analysisNote}>{text.settings.localFallbackUsed}</Text> : null}
-              <PrimaryAction label={text.today.retrySameDrill} icon="refresh" onPress={() => setSessionStep('retry')} />
+              {!analysisPending && analysisSource === 'fallback' ? <Text style={styles.analysisNote}>{text.settings.localFallbackUsed}</Text> : null}
+              {!analysisPending ? <PrimaryAction label={text.today.retrySameDrill} icon="refresh" onPress={() => setSessionStep('retry')} /> : null}
             </View>
           ) : null}
 
@@ -495,34 +421,24 @@ export default function TodayScreen() {
 
           {sessionStep === 'summary' ? (
             <View style={styles.stack}>
-              <Text style={styles.title}>{text.today.dayComplete}</Text>
+              <Text style={styles.title}>{state.language === 'ko' ? '훈련 기록됨' : 'Exercise recorded'}</Text>
               <Text style={styles.body}>{retryAnalysis?.comparison?.summary ?? (firstTake && retryTake ? compareTakes(firstTake, retryTake, state.language) : text.today.savedFallback)}</Text>
-              {retryAnalysis ? <AnalysisPanel analysis={retryAnalysis} title={text.settings.retryAnalysisTitle} text={text} /> : null}
+              {retryAnalysis ? <AnalysisPanel analysis={retryAnalysis} title={text.settings.retryAnalysisTitle} text={text} language={state.language} /> : null}
               <View style={styles.panel}>
                 <Text style={styles.panelTitle}>{text.today.recordedTakes}</Text>
                 <Metric value={formatDuration(firstTake?.durationMs ?? 0)} label={text.common.firstTake} />
                 <Metric value={formatDuration(retryTake?.durationMs ?? 0)} label={text.common.retry} />
               </View>
-              <View style={styles.summaryGrid}>
-                <Metric value={`${state.streak.current}`} label={text.common.dayStreak} />
-                <Metric value={state.streak.monthlyGraceUsed ? '0' : '1'} label={text.common.graceDay} />
-                <Metric value={`${state.journeyDay}`} label={`${text.common.of} ${TOTAL_JOURNEY_DAYS}`} />
-              </View>
               <View style={styles.panel}>
-                <Text style={styles.panelTitle}>{state.language === 'ko' ? '오늘 훈련 증거' : 'Daily training proof'}</Text>
+                <Text style={styles.panelTitle}>{state.language === 'ko' ? '오늘 진행도' : 'Today progress'}</Text>
+                <Metric value={`${dailyGoalCompleted}/${dailyGoalTotal}`} label={state.language === 'ko' ? '훈련' : 'tasks'} />
                 <Metric value={formatTimer(recordedPracticeMs)} label={state.language === 'ko' ? '녹음 시간' : 'recorded audio'} />
                 <Metric value={currentExercisePairComplete ? '2/2' : firstTake ? '1/2' : '0/2'} label={state.language === 'ko' ? '테이크' : 'takes'} />
-                <Text style={styles.analysisNote}>
-                  {state.language === 'ko'
-                    ? `완료 기준: 오늘 녹음 ${formatTimer(DAILY_RECORDED_TARGET_MS)}, 모든 훈련의 첫 테이크와 재시도.`
-                    : `Completion rule: ${formatTimer(DAILY_RECORDED_TARGET_MS)} recorded audio today, first take and retry for every exercise.`}
-                </Text>
-                {completionMessage ? <Text style={styles.errorText}>{completionMessage}</Text> : null}
               </View>
               <PrimaryAction
-                label={dailyCompletionReady ? text.today.backToToday : activeExerciseIndex < todayExerciseCards.length - 1 && currentExercisePairComplete ? state.language === 'ko' ? '다음 훈련' : 'Next exercise' : state.language === 'ko' ? '완료 기준 확인' : 'Check completion rule'}
-                icon={dailyCompletionReady ? 'home' : activeExerciseIndex < todayExerciseCards.length - 1 && currentExercisePairComplete ? 'navigate-next' : 'timer'}
-                onPress={completeTrainingIfReady}
+                label={firstIncompleteExerciseIndex >= 0 ? state.language === 'ko' ? '다음 훈련' : 'Next exercise' : text.today.backToToday}
+                icon={firstIncompleteExerciseIndex >= 0 ? 'navigate-next' : 'home'}
+                onPress={continueAfterSummary}
               />
             </View>
           ) : null}
@@ -866,6 +782,69 @@ function formatDebugMetric(value: number | undefined | null) {
   return typeof value === 'number' ? value.toFixed(2) : 'n/a';
 }
 
+function percentMetric(value: number | undefined | null) {
+  return typeof value === 'number' ? `${Math.round(value * 100)}%` : 'n/a';
+}
+
+function metricLabel(en: string, ko: string, language: MainAppLanguage) {
+  return language === 'ko' ? ko : en;
+}
+
+function analysisMetricItems(analysis: MonthOneAnalysisResponse, language: MainAppLanguage) {
+  const metrics = analysis.metrics;
+
+  switch (analysis.drillId) {
+    case 'sustained_hiss':
+      return [
+        { value: percentMetric(metrics.loudnessSteadiness), label: metricLabel('steadiness', '고른 흐름', language) },
+        { value: percentMetric(1 - metrics.fadeAmount), label: metricLabel('ending', '끝 유지', language) },
+        { value: formatDebugMetric(metrics.burstRatio), label: metricLabel('start push', '시작 압력', language) },
+      ];
+    case 'gentle_hum':
+      return [
+        { value: percentMetric(metrics.pitchStability), label: metricLabel('pitch hold', '음 유지', language) },
+        { value: percentMetric(metrics.loudnessSteadiness), label: metricLabel('volume', '음량', language) },
+        { value: percentMetric(1 - metrics.onsetAbruptness), label: metricLabel('easy start', '부드러운 시작', language) },
+      ];
+    case 'soft_hum_start':
+      return [
+        { value: percentMetric(1 - metrics.onsetAbruptness), label: metricLabel('easy start', '부드러운 시작', language) },
+        { value: formatDebugMetric(metrics.burstRatio), label: metricLabel('start push', '시작 압력', language) },
+        { value: percentMetric(metrics.loudnessSteadiness), label: metricLabel('even hum', '고른 허밍', language) },
+      ];
+    case 'mmm_resonance':
+      return [
+        { value: percentMetric(metrics.resonanceScore), label: metricLabel('mmm ring', 'mmm 울림', language) },
+        { value: percentMetric(metrics.resonanceStability), label: metricLabel('stability', '안정성', language) },
+        { value: percentMetric(metrics.forwardEnergyRatio), label: metricLabel('forward', '앞쪽 울림', language) },
+      ];
+    case 'fah_vah_resonance':
+      return [
+        { value: percentMetric(metrics.resonanceScore), label: metricLabel('vowel ring', '모음 울림', language) },
+        { value: percentMetric(metrics.forwardEnergyRatio), label: metricLabel('forward', '앞쪽 울림', language) },
+        { value: percentMetric(metrics.brightness), label: metricLabel('brightness', '밝기', language) },
+      ];
+    case 'hum_to_ah':
+      return [
+        { value: percentMetric(metrics.humToVowelContinuity), label: metricLabel('connection', '연결', language) },
+        { value: percentMetric(metrics.loudnessSteadiness), label: metricLabel('steadiness', '안정성', language) },
+        { value: percentMetric(1 - metrics.fadeAmount), label: metricLabel('ending', '끝 유지', language) },
+      ];
+    case 'short_tone_hold':
+      return [
+        { value: percentMetric(metrics.pitchStability), label: metricLabel('pitch hold', '음 유지', language) },
+        { value: percentMetric(metrics.loudnessSteadiness), label: metricLabel('volume', '음량', language) },
+        { value: percentMetric(1 - metrics.fadeAmount), label: metricLabel('ending', '끝 유지', language) },
+      ];
+    default:
+      return [
+        { value: percentMetric(metrics.loudnessSteadiness), label: metricLabel('steadiness', '안정성', language) },
+        { value: percentMetric(1 - metrics.fadeAmount), label: metricLabel('ending', '끝 유지', language) },
+        { value: formatDebugMetric(metrics.durationSec), label: metricLabel('seconds', '초', language) },
+      ];
+  }
+}
+
 function formatTimer(durationMs: number) {
   const totalSeconds = Math.max(0, Math.ceil(durationMs / 1000));
   const minutes = Math.floor(totalSeconds / 60);
@@ -905,8 +884,34 @@ function FeedbackBlock({ label, detail }: { label: string; detail: string }) {
   );
 }
 
-function AnalysisPanel({ analysis, title, text }: { analysis: MonthOneAnalysisResponse; title: string; text: typeof mainAppText.en }) {
+function AnalysisLoadingState({ message, language }: { message: string; language: MainAppLanguage }) {
+  return (
+    <View style={styles.analysisLoadingPanel} accessibilityRole="progressbar">
+      <SignalWave active />
+      <Text style={styles.analysisLoadingTitle}>{language === 'ko' ? '테이크 분석 중' : 'Analyzing take'}</Text>
+      <Text style={styles.analysisLoadingBody}>{message}</Text>
+      <View style={styles.analysisLoadingDots}>
+        <View style={styles.analysisLoadingDot} />
+        <View style={styles.analysisLoadingDot} />
+        <View style={styles.analysisLoadingDot} />
+      </View>
+    </View>
+  );
+}
+
+function AnalysisPanel({
+  analysis,
+  title,
+  text,
+  language,
+}: {
+  analysis: MonthOneAnalysisResponse;
+  title: string;
+  text: typeof mainAppText.en;
+  language: MainAppLanguage;
+}) {
   const safetyText = analysis.safetyFlags.length > 0 ? analysis.safetyFlags.join(', ').replaceAll('_', ' ') : null;
+  const metricItems = analysisMetricItems(analysis, language);
 
   return (
     <View style={styles.analysisPanel}>
@@ -919,9 +924,9 @@ function AnalysisPanel({ analysis, title, text }: { analysis: MonthOneAnalysisRe
       </View>
 
       <View style={styles.analysisMetrics}>
-        <Metric value={formatDebugMetric(analysis.metrics.resonanceScore)} label="resonance" />
-        <Metric value={formatDebugMetric(analysis.metrics.forwardEnergyRatio)} label="forward" />
-        <Metric value={formatDebugMetric(analysis.metrics.throatEnergyRatio)} label="throat" />
+        {metricItems.map((item) => (
+          <Metric key={item.label} value={item.value} label={item.label} />
+        ))}
       </View>
 
       <AnalysisLine label={text.today.whatWeHeard} detail={analysis.feedback.whatWeHeard} />
@@ -1332,10 +1337,6 @@ const styles = StyleSheet.create({
   heroMeta: {
     gap: 4,
   },
-  summaryGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
   metric: {
     backgroundColor: theme.surface,
     borderColor: 'rgba(184, 199, 211, 0.12)',
@@ -1477,6 +1478,39 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
+  },
+  analysisLoadingPanel: {
+    alignItems: 'center',
+    backgroundColor: theme.surfaceRaised,
+    borderColor: 'rgba(50, 230, 226, 0.32)',
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: SPACE * 2,
+    padding: SPACE * 4,
+  },
+  analysisLoadingTitle: {
+    color: theme.text,
+    fontSize: 18,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  analysisLoadingBody: {
+    color: theme.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  analysisLoadingDots: {
+    flexDirection: 'row',
+    gap: SPACE,
+    paddingTop: SPACE,
+  },
+  analysisLoadingDot: {
+    backgroundColor: theme.primaryBright,
+    borderRadius: 999,
+    height: 7,
+    opacity: 0.72,
+    width: 28,
   },
   analysisPanel: {
     backgroundColor: theme.surfaceRaised,

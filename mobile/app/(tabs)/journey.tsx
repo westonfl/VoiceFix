@@ -29,12 +29,6 @@ export default function JourneyScreen() {
           <Text style={styles.body}>{screenBody}</Text>
         </View>
 
-        <View style={styles.progressPanel}>
-          <Text style={styles.panelTitle}>{text.journey.currentPlacement}</Text>
-          <Text style={styles.currentWeek}>{text.common.week} {state.currentWeekNumber}</Text>
-          <Text style={styles.body}>{state.placement ? text.today.placementReason : text.journey.completeOnboarding}</Text>
-        </View>
-
         {phases.map((phase) => {
           const weeks = curriculum.filter((week) => week.phase === phase);
           const meta = getPhaseMeta(phase);
@@ -193,25 +187,6 @@ const styles = StyleSheet.create({
     color: theme.textMuted,
     fontSize: 15,
     lineHeight: 23,
-  },
-  progressPanel: {
-    backgroundColor: theme.surfaceRaised,
-    borderColor: 'rgba(50, 230, 226, 0.24)',
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 8,
-    padding: 16,
-  },
-  panelTitle: {
-    color: theme.textSubtle,
-    fontSize: 13,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  currentWeek: {
-    color: theme.text,
-    fontSize: 28,
-    fontWeight: '800',
   },
   phaseBlock: {
     gap: 14,
