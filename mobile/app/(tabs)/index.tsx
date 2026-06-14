@@ -12,6 +12,7 @@ import type { ComponentProps } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -49,21 +50,18 @@ import {
   type MonthOneAnalysisResponse,
 } from "@/features/prototype/serverAnalysis";
 import { usePrototype } from "@/features/prototype/state";
-import {
-  computeLiveSessionResult,
-  type LiveMeterSample,
-  type LiveSessionResult,
-} from "@/features/training/liveAnalysis";
+import type { LiveMeterSample } from "@/features/training/liveAnalysis";
+import { TrainingAnalyzingScreen } from "@/features/training/TrainingAnalyzingScreen";
 import { TrainingDetailScreen } from "@/features/training/TrainingDetailScreen";
 import { TrainingLiveSession } from "@/features/training/TrainingLiveSession";
 import { TrainingResultsScreen } from "@/features/training/TrainingResultsScreen";
+import { getExerciseIllustration } from "@/features/training/exerciseIllustrations";
 import {
-  DEFAULT_EXERCISE_DURATION_SEC,
   TRAINING_METER_INTERVAL_MS,
   TRAINING_RECORDING_OPTIONS,
 } from "@/features/training/recording";
 
-type SessionStep = "detail" | "live" | "results";
+type SessionStep = "detail" | "live" | "analyzing" | "results";
 type RecordedTake = {
   uri?: string;
   durationMs: number;
@@ -107,14 +105,11 @@ export default function TodayScreen() {
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [firstTake, setFirstTake] = useState<RecordedTake | null>(null);
-  const [liveSessionResult, setLiveSessionResult] =
-    useState<LiveSessionResult | null>(null);
   const [liveSessionKey, setLiveSessionKey] = useState(0);
   const [firstAnalysis, setFirstAnalysis] =
     useState<MonthOneAnalysisResponse | null>(null);
   const [retryAnalysis, setRetryAnalysis] =
     useState<MonthOneAnalysisResponse | null>(null);
-  const [analysisPending, setAnalysisPending] = useState(false);
   const [analysisSource, setAnalysisSource] = useState<
     "server" | "fallback" | null
   >(null);
@@ -274,28 +269,20 @@ export default function TodayScreen() {
       durationMs: payload.durationMs,
       uri: payload.uri,
     };
-    const targetDurationMs = DEFAULT_EXERCISE_DURATION_SEC * 1000;
-    const result =
-      drillId != null
-        ? computeLiveSessionResult({
-            samples: payload.samples,
-            durationMs: payload.durationMs,
-            drillId,
-            language: state.language,
-            targetDurationMs,
-          })
-        : null;
 
     setFirstTake(recordedTake);
-    setLiveSessionResult(result);
-    setSessionStep("results");
     setFirstAnalysis(null);
     setRetryAnalysis(null);
     setAnalysisSource(null);
+    setSessionStep("analyzing");
 
     if (recordedTake.uri && drillId) {
-      void analyzeFirstTake(recordedTake);
+      await analyzeFirstTake(recordedTake);
+      return;
     }
+
+    setAnalysisSource("fallback");
+    setSessionStep("results");
   }
 
   function startTrainingSession() {
@@ -305,7 +292,6 @@ export default function TodayScreen() {
       firstIncompleteExerciseIndex >= 0 ? firstIncompleteExerciseIndex : 0,
     );
     setFirstTake(null);
-    setLiveSessionResult(null);
     setLiveSessionKey((current) => current + 1);
     setFirstAnalysis(null);
     setRetryAnalysis(null);
@@ -316,7 +302,6 @@ export default function TodayScreen() {
     setSessionOpen(false);
     setSessionStep("detail");
     setFirstTake(null);
-    setLiveSessionResult(null);
     setFirstAnalysis(null);
     setRetryAnalysis(null);
     setAnalysisSource(null);
@@ -324,7 +309,6 @@ export default function TodayScreen() {
 
   function redoLiveSession() {
     setFirstTake(null);
-    setLiveSessionResult(null);
     setLiveSessionKey((current) => current + 1);
     setFirstAnalysis(null);
     setRetryAnalysis(null);
@@ -354,7 +338,6 @@ export default function TodayScreen() {
       setActiveExerciseIndex(nextIncompleteIndex);
       setSessionStep("detail");
       setFirstTake(null);
-      setLiveSessionResult(null);
       setLiveSessionKey((current) => current + 1);
       setFirstAnalysis(null);
       setRetryAnalysis(null);
@@ -369,11 +352,11 @@ export default function TodayScreen() {
     const drillId = monthOneDrillId;
     if (!take.uri || !drillId) {
       setAnalysisSource("fallback");
+      setSessionStep("results");
       return;
     }
 
     try {
-      setAnalysisPending(true);
       const analysis = await analyzeMonthOneTake({
         uri: take.uri,
         drillId,
@@ -385,7 +368,7 @@ export default function TodayScreen() {
     } catch {
       setAnalysisSource("fallback");
     } finally {
-      setAnalysisPending(false);
+      setSessionStep("results");
     }
   }
 
@@ -491,7 +474,8 @@ export default function TodayScreen() {
             text={text}
             currentExercise={currentExercise}
             liveSessionKey={liveSessionKey}
-            liveSessionResult={liveSessionResult}
+            firstAnalysis={firstAnalysis}
+            analysisSource={analysisSource}
             language={state.language}
             audioRecorder={audioRecorder}
             recorderState={recorderState}
@@ -523,7 +507,8 @@ function TrainingSessionModalContent({
   text,
   currentExercise,
   liveSessionKey,
-  liveSessionResult,
+  firstAnalysis,
+  analysisSource,
   language,
   audioRecorder,
   recorderState,
@@ -538,7 +523,8 @@ function TrainingSessionModalContent({
   text: (typeof mainAppText)["en"];
   currentExercise?: TodayExerciseCard;
   liveSessionKey: number;
-  liveSessionResult: LiveSessionResult | null;
+  firstAnalysis: MonthOneAnalysisResponse | null;
+  analysisSource: "server" | "fallback" | null;
   language: MainAppLanguage;
   audioRecorder: AudioRecorder;
   recorderState: RecorderState;
@@ -554,6 +540,71 @@ function TrainingSessionModalContent({
   onDone: () => void;
 }) {
   const insets = useReliableSafeInsets();
+  const usesFullHeightStep =
+    sessionStep === "analyzing" || sessionStep === "results";
+
+  const stepContent = (
+    <>
+      {sessionStep === "live" ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+          onPress={onClose}
+          style={({ pressed }) => [
+            headerIconButtonStyles.button,
+            headerIconButtonStyles.buttonAlignStart,
+            pressed && headerIconButtonStyles.buttonPressed,
+          ]}
+        >
+          <MaterialIcons name="close" size={22} color={theme.text} />
+        </Pressable>
+      ) : null}
+
+      {sessionStep === "detail" && currentExercise ? (
+        <TrainingDetailScreen
+          title={currentExercise.title}
+          category={currentExercise.category}
+          goal={currentExercise.goal}
+          instruction={currentExercise.instruction}
+          exerciseId={currentExercise.id}
+          icon={currentExercise.icon}
+          gradient={currentExercise.gradient}
+          language={language}
+          onClose={onClose}
+          onStart={onStartLive}
+        />
+      ) : null}
+
+      {sessionStep === "live" && currentExercise ? (
+        <TrainingLiveSession
+          key={liveSessionKey}
+          exerciseId={currentExercise.id}
+          exerciseTitle={currentExercise.title}
+          gradient={currentExercise.gradient}
+          language={language}
+          audioRecorder={audioRecorder}
+          recorderState={recorderState}
+          onComplete={onLiveComplete}
+          onCancel={onLiveCancel}
+        />
+      ) : null}
+
+      {sessionStep === "analyzing" ? (
+        <TrainingAnalyzingScreen language={language} />
+      ) : null}
+
+      {sessionStep === "results" ? (
+        <TrainingResultsScreen
+          analysis={firstAnalysis}
+          fallback={analysisSource === "fallback"}
+          language={language}
+          text={text}
+          onRedo={onRedo}
+          onDone={onDone}
+        />
+      ) : null}
+    </>
+  );
 
   return (
     <View
@@ -566,80 +617,18 @@ function TrainingSessionModalContent({
         },
       ]}
     >
-      <ScrollView
-        contentContainerStyle={styles.sessionContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {sessionStep === "results" ? (
-          <View style={styles.sessionTop}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-              onPress={onClose}
-              style={({ pressed }) => [
-                headerIconButtonStyles.button,
-                pressed && headerIconButtonStyles.buttonPressed,
-              ]}
-            >
-              <MaterialIcons name="close" size={22} color={theme.text} />
-            </Pressable>
-            <Text style={styles.kicker}>{text.today.trainingSession}</Text>
-          </View>
-        ) : null}
-
-        {sessionStep === "live" ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-            onPress={onClose}
-            style={({ pressed }) => [
-              headerIconButtonStyles.button,
-              headerIconButtonStyles.buttonAlignStart,
-              pressed && headerIconButtonStyles.buttonPressed,
-            ]}
-          >
-            <MaterialIcons name="close" size={22} color={theme.text} />
-          </Pressable>
-        ) : null}
-
-        {sessionStep === "detail" && currentExercise ? (
-          <TrainingDetailScreen
-            title={currentExercise.title}
-            category={currentExercise.category}
-            goal={currentExercise.goal}
-            instruction={currentExercise.instruction}
-            exerciseId={currentExercise.id}
-            icon={currentExercise.icon}
-            gradient={currentExercise.gradient}
-            language={language}
-            onClose={onClose}
-            onStart={onStartLive}
-          />
-        ) : null}
-
-        {sessionStep === "live" && currentExercise ? (
-          <TrainingLiveSession
-            key={liveSessionKey}
-            exerciseId={currentExercise.id}
-            exerciseTitle={currentExercise.title}
-            gradient={currentExercise.gradient}
-            language={language}
-            audioRecorder={audioRecorder}
-            recorderState={recorderState}
-            onComplete={onLiveComplete}
-            onCancel={onLiveCancel}
-          />
-        ) : null}
-
-        {sessionStep === "results" && liveSessionResult ? (
-          <TrainingResultsScreen
-            result={liveSessionResult}
-            language={language}
-            onRedo={onRedo}
-            onDone={onDone}
-          />
-        ) : null}
-      </ScrollView>
+      {usesFullHeightStep ? (
+        <View style={[styles.sessionContent, styles.sessionContentFlex]}>
+          {stepContent}
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.sessionContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {stepContent}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -977,6 +966,8 @@ function TaskCardContent({
   language: string;
   muted?: boolean;
 }) {
+  const illustration = getExerciseIllustration(exercise.id);
+
   return (
     <View style={styles.taskCardInner}>
       <View style={styles.exerciseCardHeader}>
@@ -994,7 +985,22 @@ function TaskCardContent({
           {exercise.title}
         </Text>
       </View>
-      <ExercisePattern exerciseId={exercise.id} visual={exercise.visual} muted={muted} />
+      {illustration ? (
+        <View style={styles.exerciseIllustrationFrame}>
+          <Image
+            accessibilityLabel={
+              language === "ko"
+                ? `${exercise.title} 운동 그림`
+                : `${exercise.title} exercise illustration`
+            }
+            resizeMode="cover"
+            source={illustration}
+            style={styles.exerciseIllustration}
+          />
+        </View>
+      ) : (
+        <ExercisePattern exerciseId={exercise.id} visual={exercise.visual} muted={muted} />
+      )}
     </View>
   );
 }
@@ -1325,6 +1331,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: SPACE * 4,
   },
+  sessionContentFlex: {
+    flex: 1,
+  },
   content: {
     gap: SPACE * 5,
     paddingHorizontal: 22,
@@ -1598,6 +1607,17 @@ const styles = StyleSheet.create({
     minHeight: 186,
     position: "relative",
     zIndex: 1,
+  },
+  exerciseIllustrationFrame: {
+    borderRadius: 22,
+    flex: 1,
+    marginTop: SPACE * 3,
+    minHeight: 152,
+    overflow: "hidden",
+  },
+  exerciseIllustration: {
+    height: "100%",
+    width: "100%",
   },
   pickExerciseIcon: {
     alignItems: "center",

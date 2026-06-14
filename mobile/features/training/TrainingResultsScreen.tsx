@@ -1,95 +1,103 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { VoiceFixTheme as theme } from '@/constants/theme';
-import type { LiveSessionResult } from '@/features/training/liveAnalysis';
+import type { mainAppText } from '@/features/prototype/localization';
 import type { MainAppLanguage } from '@/features/prototype/localization';
+import type { MonthOneAnalysisResponse } from '@/features/prototype/serverAnalysis';
 
 type TrainingResultsScreenProps = {
-  result: LiveSessionResult;
+  analysis: MonthOneAnalysisResponse | null;
+  fallback: boolean;
   language: MainAppLanguage;
+  text: (typeof mainAppText)['en'];
   onRedo: () => void;
   onDone: () => void;
 };
 
-function ResultStar({ filled, large = false }: { filled: boolean; large?: boolean }) {
+function FeedbackSection({ label, detail }: { label: string; detail: string }) {
   return (
-    <View style={[styles.starShell, large && styles.starShellLarge]}>
-      {filled ? (
-        <LinearGradient
-          colors={['#D9FFE1', '#DDF2FF', '#EEE2FF', '#FFFFD6']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.starFill}
-        />
-      ) : (
-        <View style={styles.starGhost} />
-      )}
-      <MaterialIcons
-        name="star"
-        size={large ? 54 : 42}
-        color={filled ? theme.text : theme.border}
-        style={styles.starIcon}
-      />
+    <View style={styles.feedbackSection}>
+      <Text style={styles.feedbackLabel}>{label}</Text>
+      <Text style={styles.feedbackDetail}>{detail}</Text>
     </View>
   );
 }
 
 export function TrainingResultsScreen({
-  result,
+  analysis,
+  fallback,
   language,
+  text,
   onRedo,
   onDone,
 }: TrainingResultsScreenProps) {
-  const filledStars = Math.max(0, Math.min(3, result.stars));
+  const safetyText =
+    analysis && analysis.safetyFlags.length > 0
+      ? analysis.safetyFlags.join(', ').replaceAll('_', ' ')
+      : null;
 
   return (
     <View style={styles.screen}>
-      <View style={styles.hero}>
-        <View style={styles.starRow}>
-          {[0, 1, 2].map((index) => (
-            <ResultStar key={index} filled={index < filledStars} large={index < 2} />
-          ))}
-        </View>
-        <Text style={styles.score}>{result.score}</Text>
-      </View>
-
-      <View style={styles.metricCard}>
-        <Text style={styles.metricLabel}>{result.primaryMetric.label}</Text>
-        <Text style={styles.metricValue}>{result.primaryMetric.value}%</Text>
-        <View style={styles.metricTrack}>
-          <View
-            style={[
-              styles.metricFill,
-              { width: `${Math.max(8, result.primaryMetric.value)}%` },
-            ]}
-          />
-          <View
-            style={[
-              styles.metricThumb,
-              { left: `${Math.max(4, Math.min(96, result.primaryMetric.value))}%` },
-            ]}
-          />
-        </View>
-        <Text style={styles.metricVerdict}>{result.primaryMetric.verdict}</Text>
-      </View>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {fallback || !analysis ? (
+          <View style={styles.fallbackPanel}>
+            <Text style={styles.fallbackTitle}>
+              {language === 'ko' ? '분석을 사용할 수 없습니다' : 'Analysis unavailable'}
+            </Text>
+            <Text style={styles.fallbackBody}>
+              {language === 'ko'
+                ? '지금은 녹음을 분석할 수 없습니다. 다시 시도하거나 완료를 눌러 계속하세요.'
+                : 'We could not analyze this take right now. Retry or tap Done to continue.'}
+            </Text>
+          </View>
+        ) : (
+          <>
+            {analysis.comparison ? (
+              <FeedbackSection
+                label={text.today.secondTakeComparison}
+                detail={analysis.comparison.summary}
+              />
+            ) : null}
+            <FeedbackSection
+              label={text.today.whatWeHeard}
+              detail={analysis.feedback.whatWeHeard}
+            />
+            <FeedbackSection
+              label={text.today.whatItMeans}
+              detail={analysis.feedback.whatItOftenMeans}
+            />
+            <FeedbackSection
+              label={text.today.oneFix}
+              detail={analysis.feedback.oneThingToTry}
+            />
+            <FeedbackSection
+              label={text.today.retryRule}
+              detail={analysis.feedback.retryGoal}
+            />
+            {safetyText ? (
+              <Text style={styles.safety}>{safetyText}</Text>
+            ) : null}
+          </>
+        )}
+      </ScrollView>
 
       <View style={styles.actions}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={language === 'ko' ? '다시 하기' : 'Redo'}
           onPress={onRedo}
-          style={({ pressed }) => [styles.redoButton, pressed && styles.redoButtonPressed]}
+          style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
         >
-          <MaterialIcons name="refresh" size={24} color={theme.background} />
+          <Text style={styles.actionLabel}>{language === 'ko' ? '다시 하기' : 'Retry'}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
           onPress={onDone}
-          style={({ pressed }) => [styles.doneButton, pressed && styles.doneButtonPressed]}
+          style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
         >
-          <Text style={styles.doneLabel}>{language === 'ko' ? '완료' : 'Done'}</Text>
+          <Text style={styles.actionLabel}>{language === 'ko' ? '완료' : 'Done'}</Text>
         </Pressable>
       </View>
     </View>
@@ -98,112 +106,59 @@ export function TrainingResultsScreen({
 
 const styles = StyleSheet.create({
   screen: {
-    gap: 28,
-    justifyContent: 'center',
+    flex: 1,
+    gap: 20,
     minHeight: 560,
     paddingTop: 12,
   },
-  hero: {
-    alignItems: 'center',
-    gap: 10,
+  content: {
+    gap: 22,
+    paddingBottom: 12,
   },
-  starRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 4,
-    justifyContent: 'center',
-    minHeight: 88,
+  feedbackSection: {
+    gap: 8,
   },
-  starShell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  starShellLarge: {
-    transform: [{ translateY: -4 }],
-  },
-  starFill: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 999,
-    transform: [{ scale: 0.72 }],
-  },
-  starGhost: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: theme.surface,
-    borderRadius: 999,
-    transform: [{ scale: 0.72 }],
-  },
-  starIcon: {
-    zIndex: 1,
-  },
-  score: {
-    color: theme.text,
-    fontSize: 56,
-    fontWeight: '900',
-    letterSpacing: -1,
-  },
-  metricCard: {
-    backgroundColor: '#F3F0FF',
-    borderRadius: 24,
-    gap: 10,
-    padding: 22,
-  },
-  metricLabel: {
+  feedbackLabel: {
     color: theme.textSubtle,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.1,
     textTransform: 'uppercase',
   },
-  metricValue: {
+  feedbackDetail: {
     color: theme.text,
-    fontSize: 42,
+    fontSize: 17,
+    fontWeight: '600',
+    lineHeight: 26,
+  },
+  fallbackPanel: {
+    backgroundColor: theme.surfaceRaised,
+    borderRadius: 24,
+    gap: 10,
+    padding: 22,
+  },
+  fallbackTitle: {
+    color: theme.text,
+    fontSize: 20,
     fontWeight: '900',
   },
-  metricTrack: {
-    backgroundColor: theme.border,
-    borderRadius: 999,
-    height: 8,
-    marginTop: 4,
-    overflow: 'visible',
-    position: 'relative',
-  },
-  metricFill: {
-    backgroundColor: theme.text,
-    borderRadius: 999,
-    height: 8,
-  },
-  metricThumb: {
-    backgroundColor: theme.text,
-    borderRadius: 999,
-    height: 18,
-    marginLeft: -9,
-    position: 'absolute',
-    top: -5,
-    width: 18,
-  },
-  metricVerdict: {
+  fallbackBody: {
     color: theme.textMuted,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  safety: {
+    color: theme.warning,
     fontSize: 14,
-    marginTop: 4,
+    fontWeight: '700',
+    lineHeight: 20,
   },
   actions: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 8,
+    marginTop: 'auto',
   },
-  redoButton: {
-    alignItems: 'center',
-    backgroundColor: theme.text,
-    borderRadius: 18,
-    height: 58,
-    justifyContent: 'center',
-    width: 58,
-  },
-  redoButtonPressed: {
-    opacity: 0.9,
-  },
-  doneButton: {
+  actionButton: {
     alignItems: 'center',
     backgroundColor: theme.text,
     borderRadius: 18,
@@ -211,10 +166,10 @@ const styles = StyleSheet.create({
     height: 58,
     justifyContent: 'center',
   },
-  doneButtonPressed: {
+  actionButtonPressed: {
     opacity: 0.9,
   },
-  doneLabel: {
+  actionLabel: {
     color: theme.background,
     fontSize: 18,
     fontWeight: '800',

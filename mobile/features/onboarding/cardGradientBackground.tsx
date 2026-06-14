@@ -166,6 +166,10 @@ const GrainOverlay = memo(function GrainOverlay() {
   );
 });
 
+export function GradientGrainOverlay() {
+  return <GrainOverlay />;
+}
+
 export function CardGradientBackground({
   muted = false,
   variant = 'integration',

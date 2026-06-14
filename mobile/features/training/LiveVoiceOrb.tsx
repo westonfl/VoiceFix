@@ -1,5 +1,5 @@
 import type { CardGradientVariant } from '@/features/onboarding/cardGradientBackground';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
@@ -8,10 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import {
-  MeshGradientSurface,
-  meshBlobsFromGradientVariant,
-} from '@/features/training/MeshGradientSurface';
+import { ExerciseOrbMesh } from '@/features/training/ExerciseOrbMesh';
 
 const ORB_SIZE = 260;
 const MIN_SCALE = 0.76;
@@ -25,10 +22,6 @@ type LiveVoiceOrbProps = {
 
 export function LiveVoiceOrb({ level, active = true, gradient }: LiveVoiceOrbProps) {
   const levelValue = useSharedValue(level);
-  const mesh = useMemo(
-    () => meshBlobsFromGradientVariant(gradient, ORB_SIZE),
-    [gradient],
-  );
 
   useEffect(() => {
     levelValue.value = withTiming(Math.max(0, Math.min(1, level)), {
@@ -49,16 +42,7 @@ export function LiveVoiceOrb({ level, active = true, gradient }: LiveVoiceOrbPro
     <View style={styles.wrap}>
       <Animated.View style={[styles.orb, orbStyle]}>
         <View style={styles.inner}>
-          <MeshGradientSurface
-            active={active}
-            baseColor={mesh.baseColor}
-            blobs={mesh.blobs}
-            depth
-            grain="heavy"
-            motion="lively"
-            size={ORB_SIZE}
-            surfaceId={`orb-${gradient}`}
-          />
+          <ExerciseOrbMesh active={active} size={ORB_SIZE} variant={gradient} />
         </View>
       </Animated.View>
     </View>

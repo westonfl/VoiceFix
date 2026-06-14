@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { ComponentProps } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { headerIconButtonStyles } from '@/constants/headerButtons';
 import { VoiceFixTheme as theme } from '@/constants/theme';
@@ -11,6 +11,7 @@ import {
 import {
   DEFAULT_EXERCISE_DURATION_SEC,
 } from '@/features/training/recording';
+import { getExerciseIllustration } from '@/features/training/exerciseIllustrations';
 import {
   exerciseCategoryLabel,
   exerciseSoundCue,
@@ -46,6 +47,7 @@ export function TrainingDetailScreen({
 }: TrainingDetailScreenProps) {
   const soundCue = exerciseSoundCue(exerciseId);
   const categoryLabel = exerciseCategoryLabel(category, language);
+  const illustration = getExerciseIllustration(exerciseId);
 
   return (
     <View style={styles.stack}>
@@ -76,8 +78,19 @@ export function TrainingDetailScreen({
       </View>
 
       <View style={styles.previewCard}>
-        <View style={styles.previewLine} />
-        <Text style={styles.previewCue}>{soundCue}</Text>
+        {illustration ? (
+          <Image
+            accessibilityLabel={`${title} exercise illustration`}
+            resizeMode="cover"
+            source={illustration}
+            style={styles.previewImage}
+          />
+        ) : (
+          <>
+            <View style={styles.previewLine} />
+            <Text style={styles.previewCue}>{soundCue}</Text>
+          </>
+        )}
       </View>
 
       <View style={styles.infoCard}>
@@ -157,8 +170,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 18,
     justifyContent: 'center',
-    minHeight: 180,
-    padding: 24,
+    minHeight: 220,
+    overflow: 'hidden',
+  },
+  previewImage: {
+    height: 224,
+    width: '100%',
   },
   previewLine: {
     backgroundColor: theme.text,
