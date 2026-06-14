@@ -27,10 +27,10 @@ import {
 import { formatDuration } from "@/features/prototype/analysis";
 import { analysisMetricItems } from "@/features/prototype/analysisMetrics";
 import {
-  mainAppText,
   type MainAppLanguage,
 } from "@/features/prototype/localization";
 import {
+  AnalysisServerError,
   analyzeMonthOneTake,
   type MonthOneAnalysisResponse,
   type MonthOneDrillId,
@@ -105,7 +105,6 @@ export default function TestingCenterScreen() {
   const parsedMonth = Number(month);
   const targetMonth = Number.isFinite(parsedMonth) ? parsedMonth : 1;
   const { state, completeMonthlyTest } = usePrototype();
-  const text = mainAppText[state.language];
   const audioRecorder = useAudioRecorder(RecordingPresets.LOW_QUALITY);
   const recorderState = useAudioRecorderState(audioRecorder);
   const recordingStartedAtRef = useRef<number | null>(null);
@@ -229,15 +228,12 @@ export default function TestingCenterScreen() {
           passed: evaluation.passed,
         },
       }));
-    } catch {
+    } catch (error) {
       setResults((current) => ({
         ...current,
         [check.id]: {
           durationMs: recorderState.durationMillis,
-          message:
-            state.language === "ko"
-              ? "분석 서버에 연결하지 못했습니다. 다시 시도하세요."
-              : "Could not reach the analysis server. Try again.",
+          message: analysisFailureMessage(error, state.language),
           passed: false,
         },
       }));
@@ -393,6 +389,49 @@ export default function TestingCenterScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function analysisFailureMessage(error: unknown, language: MainAppLanguage) {
+  if (error instanceof AnalysisServerError) {
+    const detail = extractAnalysisErrorDetail(error.detail);
+
+    if (error.status) {
+      return language === "ko"
+        ? `분석 요청이 거부되었습니다. 다시 녹음해보세요.${detail ? ` ${detail}` : ""}`
+        : `The analysis request was rejected. Record again.${detail ? ` ${detail}` : ""}`;
+    }
+
+    if (error.message.includes("timed out")) {
+      return language === "ko"
+        ? "분석 시간이 너무 오래 걸렸습니다. 다시 시도하세요."
+        : "Analysis took too long. Try again.";
+    }
+
+    return language === "ko"
+      ? "분석 서버 연결이 여러 번 실패했습니다. 네트워크를 확인하고 다시 시도하세요."
+      : "Analysis server connection failed after several tries. Check the network and try again.";
+  }
+
+  return language === "ko"
+    ? "분석 서버에 연결하지 못했습니다. 다시 시도하세요."
+    : "Could not reach the analysis server. Try again.";
+}
+
+function extractAnalysisErrorDetail(detail: unknown) {
+  if (typeof detail === "string") {
+    return detail;
+  }
+
+  if (
+    typeof detail === "object" &&
+    detail !== null &&
+    "detail" in detail &&
+    typeof detail.detail === "string"
+  ) {
+    return detail.detail;
+  }
+
+  return null;
 }
 
 function evaluateCheck(
