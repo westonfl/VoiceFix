@@ -2,13 +2,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { VoiceFixTheme as theme } from '@/constants/theme';
 import type { mainAppText } from '@/features/prototype/localization';
-import type { MainAppLanguage } from '@/features/prototype/localization';
 import type { MonthOneAnalysisResponse } from '@/features/prototype/serverAnalysis';
 
 type TrainingResultsScreenProps = {
   analysis: MonthOneAnalysisResponse | null;
   fallback: boolean;
-  language: MainAppLanguage;
   text: (typeof mainAppText)['en'];
   onRedo: () => void;
   onDone: () => void;
@@ -26,7 +24,6 @@ function FeedbackSection({ label, detail }: { label: string; detail: string }) {
 export function TrainingResultsScreen({
   analysis,
   fallback,
-  language,
   text,
   onRedo,
   onDone,
@@ -44,14 +41,8 @@ export function TrainingResultsScreen({
       >
         {fallback || !analysis ? (
           <View style={styles.fallbackPanel}>
-            <Text style={styles.fallbackTitle}>
-              {language === 'ko' ? '분석을 사용할 수 없습니다' : 'Analysis unavailable'}
-            </Text>
-            <Text style={styles.fallbackBody}>
-              {language === 'ko'
-                ? '지금은 녹음을 분석할 수 없습니다. 다시 시도하거나 완료를 눌러 계속하세요.'
-                : 'We could not analyze this take right now. Retry or tap Done to continue.'}
-            </Text>
+            <Text style={styles.fallbackTitle}>{text.today.analysisUnavailable}</Text>
+            <Text style={styles.fallbackBody}>{text.today.analysisUnavailableBody}</Text>
           </View>
         ) : (
           <>
@@ -90,14 +81,14 @@ export function TrainingResultsScreen({
           onPress={onRedo}
           style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
         >
-          <Text style={styles.actionLabel}>{language === 'ko' ? '다시 하기' : 'Retry'}</Text>
+          <Text style={styles.actionLabel}>{text.journal.retry}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
           onPress={onDone}
           style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
         >
-          <Text style={styles.actionLabel}>{language === 'ko' ? '완료' : 'Done'}</Text>
+          <Text style={styles.actionLabel}>{text.today.done}</Text>
         </Pressable>
       </View>
     </View>

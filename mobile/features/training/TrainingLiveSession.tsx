@@ -4,7 +4,10 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { CardGradientVariant } from '@/features/onboarding/cardGradientBackground';
 import { VoiceFixTheme as theme } from '@/constants/theme';
-import type { MainAppLanguage } from '@/features/prototype/localization';
+import {
+  type mainAppText,
+  type MainAppLanguage,
+} from '@/features/prototype/localization';
 import { LiveSessionParticles } from '@/features/training/LiveSessionParticles';
 import { LiveVoiceOrb } from '@/features/training/LiveVoiceOrb';
 import {
@@ -22,6 +25,7 @@ type TrainingLiveSessionProps = {
   exerciseTitle: string;
   gradient: CardGradientVariant;
   language: MainAppLanguage;
+  text: (typeof mainAppText)['en'];
   durationSec?: number;
   audioRecorder: AudioRecorder;
   recorderState: RecorderState;
@@ -35,12 +39,8 @@ type TrainingLiveSessionProps = {
 
 const CUE_MS = 900;
 
-function readySetGoLabels(language: MainAppLanguage): [string, string, string] {
-  if (language === 'ko') {
-    return ['준비', '대기', '시작'];
-  }
-
-  return ['Ready', 'Set', 'Go'];
+function readySetGoLabels(text: (typeof mainAppText)['en']): [string, string, string] {
+  return [text.common.ready, text.today.readySetGoSet, text.today.readySetGoGo];
 }
 
 export function TrainingLiveSession({
@@ -48,6 +48,7 @@ export function TrainingLiveSession({
   exerciseTitle,
   gradient,
   language,
+  text,
   durationSec = DEFAULT_EXERCISE_DURATION_SEC,
   audioRecorder,
   recorderState,
@@ -61,7 +62,7 @@ export function TrainingLiveSession({
   const completedRef = useRef(false);
   const onCancelRef = useRef(onCancel);
   onCancelRef.current = onCancel;
-  const cues = readySetGoLabels(language);
+  const cues = readySetGoLabels(text);
   const liveLevel = useMemo(
     () => normalizeMetering(recorderState.metering),
     [recorderState.metering],

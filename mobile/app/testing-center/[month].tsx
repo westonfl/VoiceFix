@@ -35,10 +35,7 @@ import {
   type MonthOneAnalysisResponse,
   type MonthOneDrillId,
 } from "@/features/prototype/serverAnalysis";
-import {
-  isMonthlyTestPassed,
-  usePrototype,
-} from "@/features/prototype/state";
+import { isMonthlyTestPassed, usePrototype } from "@/features/prototype/state";
 
 type MonthOneTestCheck = {
   id: string;
@@ -117,10 +114,7 @@ export default function TestingCenterScreen() {
   const [analyzingCheckId, setAnalyzingCheckId] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, CheckResult>>({});
   const isMonthOne = targetMonth === 1;
-  const monthTestPassed = isMonthlyTestPassed(
-    state.monthlyTests,
-    targetMonth,
-  );
+  const monthTestPassed = isMonthlyTestPassed(state.monthlyTests, targetMonth);
   const allChecksPassed = monthOneChecks.every(
     (check) => results[check.id]?.passed,
   );
@@ -355,11 +349,7 @@ export default function TestingCenterScreen() {
             {showPassMonthButton || showAlreadyPassed ? (
               <PrimaryAction
                 disabled={showAlreadyPassed}
-                icon={
-                  showAlreadyPassed
-                    ? "verified"
-                    : "check-circle"
-                }
+                icon={showAlreadyPassed ? "verified" : "check-circle"}
                 label={
                   showAlreadyPassed
                     ? state.language === "ko"

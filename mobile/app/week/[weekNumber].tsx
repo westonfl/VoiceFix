@@ -10,6 +10,7 @@ import {
   displayPhase,
   displaySessionText,
   displayWeek,
+  fillTemplate,
   mainAppText,
 } from "@/features/prototype/localization";
 import { usePrototype } from "@/features/prototype/state";
@@ -28,20 +29,14 @@ export default function WeekPlanScreen() {
   const phaseLabel = displayPhase(getPhaseLabel(week.phase), state.language);
   const labels = {
     weekMeta: `${text.common.week} ${week.weekNumber} · ${phaseLabel}`,
-    successCheck: state.language === "ko" ? "성공 기준" : "Success check",
-    practice: state.language === "ko" ? "이번 주 훈련" : "What you'll practice",
-    focus: state.language === "ko" ? "목표" : "Focus",
-    how: state.language === "ko" ? "방법" : "How",
-    schedule: state.language === "ko" ? "이번 주 일정" : "Your schedule",
-    scheduleBody:
-      state.language === "ko"
-        ? "이번 주는 매일 같은 훈련을 반복합니다."
-        : "Practice the same exercises every day this week.",
-    today:
-      state.language === "ko"
-        ? `${text.common.day} ${state.currentDayNumber}`
-        : `${text.common.day} ${state.currentDayNumber}`,
-    safety: state.language === "ko" ? "안전 규칙" : "Safety rules",
+    successCheck: text.journey.successCheck,
+    practice: text.journey.practice,
+    focus: text.journey.focus,
+    how: text.journey.how,
+    schedule: text.journey.schedule,
+    scheduleBody: text.journey.scheduleBody,
+    today: `${text.common.day} ${state.currentDayNumber}`,
+    safety: text.journey.safetyRules,
   };
   const isCurrentWeek = week.weekNumber === state.currentWeekNumber;
   const isComingSoon = week.weekNumber > 4;
@@ -54,7 +49,7 @@ export default function WeekPlanScreen() {
       >
         <View style={styles.topBar}>
           <IconButton
-            label={state.language === "ko" ? "뒤로" : "Back"}
+            label={text.today.back}
             name="arrow-back"
             onPress={() => router.back()}
           />
@@ -68,11 +63,7 @@ export default function WeekPlanScreen() {
               {displaySessionText(week.goal, state.language)}
             </Text>
           ) : (
-            <Text style={styles.body}>
-              {state.language === "ko"
-                ? "현재는 1개월 호흡과 공명 훈련만 사용할 수 있습니다."
-                : "For now, only Month 1 breath and resonance training is available."}
-            </Text>
+            <Text style={styles.body}>{text.journey.monthOneOnly}</Text>
           )}
         </View>
 
@@ -84,15 +75,9 @@ export default function WeekPlanScreen() {
                 size={20}
                 color={theme.primaryBright}
               />
-              <Text style={styles.panelTitle}>
-                {state.language === "ko" ? "곧 열립니다" : "Coming soon"}
-              </Text>
+              <Text style={styles.panelTitle}>{text.journey.comingSoon}</Text>
             </View>
-            <Text style={styles.panelBody}>
-              {state.language === "ko"
-                ? "1개월 훈련과 분석 엔진을 먼저 완성한 뒤 이 달을 열겠습니다."
-                : "We will open this month after the Month 1 practice and analysis engine is complete."}
-            </Text>
+            <Text style={styles.panelBody}>{text.journey.comingSoonBody}</Text>
           </View>
         ) : (
           <>
@@ -139,9 +124,7 @@ export default function WeekPlanScreen() {
               <Text style={styles.panelBody}>{labels.scheduleBody}</Text>
               {isCurrentWeek ? (
                 <Text style={styles.todayLabel}>
-                  {state.language === "ko"
-                    ? `현재 ${labels.today}`
-                    : `You're on ${labels.today}`}
+                  {fillTemplate(text.journey.currentDay, { day: labels.today })}
                 </Text>
               ) : null}
               <View style={styles.dayChipRow}>

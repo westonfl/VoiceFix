@@ -1,27 +1,16 @@
 import type { Language } from "@/features/onboarding/types";
+import { languageOptions } from "@/features/onboarding/localization";
 
 import type { CurriculumWeek } from "./curriculum";
 
 export type MainAppLanguage = Language;
 
-export const mainAppLanguageOptions: Array<{
-  id: MainAppLanguage;
-  label: string;
-  shortLabel: string;
-}> = [
-  { id: "en", label: "English", shortLabel: "EN" },
-  { id: "es", label: "Español", shortLabel: "ES" },
-  { id: "pt", label: "Português", shortLabel: "PT" },
-  { id: "fr", label: "Français", shortLabel: "FR" },
-  { id: "de", label: "Deutsch", shortLabel: "DE" },
-  { id: "ja", label: "日本語", shortLabel: "JA" },
-  { id: "ko", label: "한국어", shortLabel: "KO" },
-  { id: "zhHans", label: "简体中文", shortLabel: "ZH-CN" },
-  { id: "zhHant", label: "繁體中文", shortLabel: "ZH-TW" },
-  { id: "hi", label: "हिन्दी", shortLabel: "HI" },
-  { id: "ar", label: "العربية", shortLabel: "AR" },
-  { id: "id", label: "Bahasa Indonesia", shortLabel: "ID" },
-];
+export const mainAppLanguageOptions = languageOptions.map((option) => ({
+  id: option.id,
+  flag: option.flag,
+  label: option.name,
+  shortLabel: option.abbr,
+}));
 
 const baseMainAppText = {
   en: {
@@ -90,6 +79,29 @@ const baseMainAppText = {
         "Recording could not be saved. Try again with a shorter take.",
       placementReason:
         "Onboarding recommended this starting point inside the roadmap.",
+      analyzing: "Analyzing",
+      analyzingBody: "Reviewing your take…",
+      analysisUnavailable: "Analysis unavailable",
+      analysisUnavailableBody:
+        "We could not analyze this take right now. Retry or tap Done to continue.",
+      done: "Done",
+      forYouTitle: "For You",
+      forYouSubtitle: "Personalized picks for your singing goal",
+      showDailyGoal: "Show daily goal",
+      dailyGoal: "Daily Goal",
+      exercisesLabel: "Exercises",
+      weekChip: "Week {number}",
+      showExerciseA11y: "Show {title}",
+      startExerciseA11y: "Start {title}",
+      exerciseIllustrationA11y: "{title} exercise illustration",
+      analyzingTake: "Analyzing take",
+      goalLabel: "Goal",
+      instructionsLabel: "Instructions",
+      startLabel: "Start",
+      readySetGoSet: "Set",
+      readySetGoGo: "Go",
+      back: "Back",
+      closeLabel: "Close",
     },
     journey: {
       kicker: "3-month roadmap",
@@ -102,6 +114,58 @@ const baseMainAppText = {
       current: "Current",
       locked: "Locked",
       note: "Skip-ahead checks are shown as prototype affordances. In production, they require one recording, one retry, and no pain report.",
+      comingSoon: "Coming soon",
+      comingSoonBody:
+        "We will open this month after the Month 1 practice and analysis engine is complete.",
+      monthOneOnly:
+        "For now, only Month 1 breath and resonance training is available.",
+      successCheck: "Success check",
+      practice: "What you'll practice",
+      focus: "Focus",
+      how: "How",
+      schedule: "Your schedule",
+      scheduleBody: "Practice the same exercises every day this week.",
+      safetyRules: "Safety rules",
+      currentDay: "You're on {day}",
+      openWeekPlan: "Opens this week's goal and training",
+      next: "Next",
+      testingCenterTitle: "Month {month} testing center",
+      monthlyCheckpoint: "Monthly checkpoint",
+      monthlyCheckpointPassed: "Monthly checkpoint · passed",
+    },
+    testing: {
+      micUnavailableTitle: "Microphone unavailable",
+      micUnavailableBody: "The testing center needs real recording permission.",
+      recordStartFailedTitle: "Recording could not start",
+      pleaseTryAgain: "Please try again.",
+      recordSaveFailed: "Recording could not be saved. Try again.",
+      analysisServerFailed:
+        "Could not reach the analysis server. Try again.",
+      monthEndGate: "Month-end gate",
+      monthOneIntro:
+        "Record and analyze each check to confirm Month 1 foundations are stable.",
+      comingSoonIntro: "This testing center is opening soon.",
+      progress: "Progress",
+      alreadyPassed: "Already passed",
+      monthOnePassed: "Month 1 test passed",
+      readyForNextMonth: "You are ready to open the next month.",
+      monthOneOnly: "Only Month 1 testing is available right now.",
+      qualityInsufficient:
+        "The recording quality was not enough. Record a clearer take.",
+      passedNext: "Passed. Move to the next check.",
+      statusPassed: "Passed",
+      statusRetry: "Retry",
+      statusReady: "Ready",
+      analyzing: "Analyzing",
+      waiting: "Waiting",
+      stopRecording: "Stop recording",
+      recordAgain: "Record again",
+      start: "Start",
+      passMonthTest: "Pass Month 1 test",
+      retake: "Retake",
+      stop: "Stop",
+      readyToUnlockNextMonth:
+        "This month is ready to unlock the next month.",
     },
     journal: {
       kicker: "Journal",
@@ -230,6 +294,29 @@ const baseMainAppText = {
       recordSaveFailed: "녹음을 저장할 수 없습니다. 더 짧게 다시 시도하세요.",
       placementReason:
         "온보딩 결과에 따라 로드맵 안의 시작점이 추천되었습니다.",
+      analyzing: "분석 중",
+      analyzingBody: "녹음을 검토하고 있습니다.",
+      analysisUnavailable: "분석을 사용할 수 없습니다",
+      analysisUnavailableBody:
+        "지금은 녹음을 분석할 수 없습니다. 다시 시도하거나 완료를 눌러 계속하세요.",
+      done: "완료",
+      forYouTitle: "추천 훈련",
+      forYouSubtitle: "오늘 목표에 맞춘 개인 훈련 카드",
+      showDailyGoal: "오늘 목표 보기",
+      dailyGoal: "오늘 목표",
+      exercisesLabel: "훈련",
+      weekChip: "{number}주",
+      showExerciseA11y: "{title} 보기",
+      startExerciseA11y: "{title} 시작",
+      exerciseIllustrationA11y: "{title} 운동 그림",
+      analyzingTake: "테이크 분석 중",
+      goalLabel: "목표",
+      instructionsLabel: "안내",
+      startLabel: "시작",
+      readySetGoSet: "대기",
+      readySetGoGo: "시작",
+      back: "뒤로",
+      closeLabel: "닫기",
     },
     journey: {
       kicker: "3개월 로드맵",
@@ -242,6 +329,57 @@ const baseMainAppText = {
       current: "진행중",
       locked: "잠김",
       note: "건너뛰기 체크는 프로토타입 기능 표시입니다. 실제 제품에서는 한 번 녹음, 한 번 재시도, 통증 없음 확인이 필요합니다.",
+      comingSoon: "곧 열립니다",
+      comingSoonBody:
+        "1개월 훈련과 분석 엔진을 먼저 완성한 뒤 이 달을 열겠습니다.",
+      monthOneOnly:
+        "현재는 1개월 호흡과 공명 훈련만 사용할 수 있습니다.",
+      successCheck: "성공 기준",
+      practice: "이번 주 훈련",
+      focus: "목표",
+      how: "방법",
+      schedule: "이번 주 일정",
+      scheduleBody: "이번 주는 매일 같은 훈련을 반복합니다.",
+      safetyRules: "안전 규칙",
+      currentDay: "현재 {day}",
+      openWeekPlan: "이번 주 목표와 훈련을 엽니다",
+      next: "다음",
+      testingCenterTitle: "{month}개월 테스트 센터",
+      monthlyCheckpoint: "월간 체크포인트",
+      monthlyCheckpointPassed: "월간 체크포인트 · 통과",
+    },
+    testing: {
+      micUnavailableTitle: "마이크를 사용할 수 없습니다",
+      micUnavailableBody: "테스트 센터는 실제 녹음 권한이 필요합니다.",
+      recordStartFailedTitle: "녹음을 시작하지 못했습니다",
+      pleaseTryAgain: "다시 시도해보세요.",
+      recordSaveFailed: "녹음 파일을 저장하지 못했습니다. 다시 시도하세요.",
+      analysisServerFailed:
+        "분석 서버에 연결하지 못했습니다. 다시 시도하세요.",
+      monthEndGate: "월말 확인",
+      monthOneIntro:
+        "각 항목을 실제로 녹음하고 분석해서 1개월 기초가 안정적인지 확인합니다.",
+      comingSoonIntro: "이 테스트 센터는 곧 열립니다.",
+      progress: "진행",
+      alreadyPassed: "이미 통과했습니다",
+      monthOnePassed: "1개월 테스트 통과",
+      readyForNextMonth: "다음 달을 열 수 있는 상태입니다.",
+      monthOneOnly: "현재는 1개월 테스트만 사용할 수 있습니다.",
+      qualityInsufficient:
+        "녹음 품질이 충분하지 않습니다. 더 선명하게 다시 녹음하세요.",
+      passedNext: "통과했습니다. 다음 항목으로 가세요.",
+      statusPassed: "통과",
+      statusRetry: "다시",
+      statusReady: "대기",
+      analyzing: "분석 중",
+      waiting: "대기",
+      stopRecording: "녹음 중지",
+      recordAgain: "다시 녹음",
+      start: "시작",
+      passMonthTest: "1개월 테스트 통과",
+      retake: "다시 녹음",
+      stop: "중지",
+      readyToUnlockNextMonth: "다음 달을 열 수 있는 상태입니다.",
     },
     journal: {
       kicker: "저널",
@@ -454,6 +592,76 @@ const mainTextTranslations: Record<
     "Retry analysis result": "Resultado del análisis del reintento",
     "First take analysis result": "Resultado del análisis de la primera toma",
     "Reset prototype": "Restablecer prototipo",
+    Analyzing: "Analizando",
+    "Reviewing your take…": "Revisando tu toma…",
+    "Analysis unavailable": "Análisis no disponible",
+    "We could not analyze this take right now. Retry or tap Done to continue.":
+      "No pudimos analizar esta toma ahora. Reintenta o pulsa Hecho para continuar.",
+    Done: "Hecho",
+    "For You": "Para ti",
+    "Personalized picks for your singing goal":
+      "Selecciones personalizadas para tu objetivo vocal",
+    "Show daily goal": "Ver objetivo diario",
+    "Daily Goal": "Objetivo diario",
+    Exercises: "Ejercicios",
+    "Week {number}": "Semana {number}",
+    "Show {title}": "Ver {title}",
+    "Start {title}": "Empezar {title}",
+    "{title} exercise illustration": "Ilustración del ejercicio {title}",
+    "Analyzing take": "Analizando toma",
+    Goal: "Objetivo",
+    Instructions: "Instrucciones",
+    Start: "Empezar",
+    Set: "Preparado",
+    Go: "Ya",
+    Back: "Atrás",
+    Close: "Cerrar",
+    "Coming soon": "Próximamente",
+    "We will open this month after the Month 1 practice and analysis engine is complete.":
+      "Abriremos este mes cuando terminemos la práctica del Mes 1 y el motor de análisis.",
+    "For now, only Month 1 breath and resonance training is available.":
+      "Por ahora solo está disponible el entrenamiento de respiración y resonancia del Mes 1.",
+    "Success check": "Criterio de éxito",
+    "What you'll practice": "Lo que practicarás",
+    Focus: "Enfoque",
+    How: "Cómo",
+    "Your schedule": "Tu horario",
+    "Practice the same exercises every day this week.":
+      "Practica los mismos ejercicios cada día esta semana.",
+    "Safety rules": "Reglas de seguridad",
+    "You're on {day}": "Estás en {day}",
+    "Opens this week's goal and training":
+      "Abre el objetivo y entrenamiento de esta semana",
+    Next: "Siguiente",
+    "Month {month} testing center": "Centro de pruebas del mes {month}",
+    "Monthly checkpoint": "Checkpoint mensual",
+    "Monthly checkpoint · passed": "Checkpoint mensual · aprobado",
+    "The testing center needs real recording permission.":
+      "El centro de pruebas necesita permiso de grabación real.",
+    "Recording could not start": "No se pudo iniciar la grabación",
+    "Please try again.": "Inténtalo de nuevo.",
+    "Could not reach the analysis server. Try again.":
+      "No se pudo conectar al servidor de análisis. Inténtalo de nuevo.",
+    "Month-end gate": "Control de fin de mes",
+    "Record and analyze each check to confirm Month 1 foundations are stable.":
+      "Graba y analiza cada prueba para confirmar que las bases del Mes 1 son estables.",
+    "This testing center is opening soon.":
+      "Este centro de pruebas abrirá pronto.",
+    Progress: "Progreso",
+    "Already passed": "Ya aprobado",
+    "Month 1 test passed": "Prueba del Mes 1 aprobada",
+    "You are ready to open the next month.":
+      "Estás listo para abrir el mes siguiente.",
+    "Only Month 1 testing is available right now.":
+      "Solo están disponibles las pruebas del Mes 1.",
+    "The recording quality was not enough. Record a clearer take.":
+      "La calidad de la grabación no fue suficiente. Graba una toma más clara.",
+    "Passed. Move to the next check.":
+      "Aprobado. Pasa a la siguiente prueba.",
+    Passed: "Aprobado",
+    Waiting: "Esperando",
+    "Stop recording": "Detener grabación",
+    "Record again": "Grabar de nuevo",
   },
   pt: {},
   fr: {},
@@ -511,6 +719,45 @@ type CompactMainPack = {
   journal: string[];
   settings: string[];
 };
+
+function mergeMainText(
+  localized: Partial<MainAppText>,
+  fallback: MainAppText = baseMainAppText.en,
+): MainAppText {
+  return Object.fromEntries(
+    (Object.keys(fallback) as (keyof MainAppText)[]).map((section) => {
+      const localizedSection = localized[section];
+      const fallbackSection = fallback[section];
+
+      if (
+        localizedSection &&
+        typeof localizedSection === "object" &&
+        fallbackSection &&
+        typeof fallbackSection === "object"
+      ) {
+        return [
+          section,
+          {
+            ...fallbackSection,
+            ...(localizedSection as Record<string, string>),
+          },
+        ];
+      }
+
+      return [section, fallbackSection];
+    }),
+  ) as MainAppText;
+}
+
+export function fillTemplate(
+  template: string,
+  values: Record<string, string | number>,
+) {
+  return Object.entries(values).reduce(
+    (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
+    template,
+  );
+}
 
 const compactMainPacks: Record<
   Exclude<ExtraMainLanguage, "es">,
@@ -1626,7 +1873,7 @@ const compactMainPacks: Record<
 };
 
 function buildCompactMainText(pack: CompactMainPack): MainAppText {
-  return {
+  return mergeMainText({
     tabs: {
       today: pack.tabs[0],
       journey: pack.tabs[1],
@@ -1753,12 +2000,13 @@ function buildCompactMainText(pack: CompactMainPack): MainAppText {
       firstAnalysisTitle: pack.settings[26],
       reset: pack.settings[27],
     },
-  };
+  } as Partial<MainAppText>);
 }
 
 export const mainAppText: Record<MainAppLanguage, MainAppText> = {
-  ...baseMainAppText,
-  es: localizeMainTree(baseMainAppText.en, "es"),
+  en: baseMainAppText.en,
+  ko: baseMainAppText.ko,
+  es: mergeMainText(localizeMainTree(baseMainAppText.en, "es")),
   pt: buildCompactMainText(compactMainPacks.pt),
   fr: buildCompactMainText(compactMainPacks.fr),
   de: buildCompactMainText(compactMainPacks.de),

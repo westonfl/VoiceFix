@@ -8,11 +8,11 @@ import {
   type RecorderState,
 } from "expo-audio";
 import Constants from "expo-constants";
+import { Image } from "expo-image";
 import type { ComponentProps } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   Animated,
-  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -42,6 +42,7 @@ import {
 } from "@/features/prototype/curriculum";
 import {
   displaySessionText,
+  fillTemplate,
   mainAppText,
   type MainAppLanguage,
 } from "@/features/prototype/localization";
@@ -128,11 +129,8 @@ export default function TodayScreen() {
     displayedWeek.dailySessions[state.currentDayNumber - 1] ??
     displayedWeek.dailySessions[0];
   const text = mainAppText[state.language];
-  const forYouTitle = state.language === "ko" ? "추천 훈련" : "For You";
-  const forYouSubtitle =
-    state.language === "ko"
-      ? "오늘 목표에 맞춘 개인 훈련 카드"
-      : "Personalized picks for your singing goal";
+  const forYouTitle = text.today.forYouTitle;
+  const forYouSubtitle = text.today.forYouSubtitle;
   const selectableWeeks = curriculum.filter(
     (week) => week.exercises.length > 0,
   );
@@ -323,10 +321,12 @@ export default function TodayScreen() {
         : [...completedExerciseIds, currentExercise.id]
       : completedExerciseIds;
 
-    if (currentExercise && firstTake && !completedExerciseIds.includes(currentExercise.id)) {
-      setCompletedRecordedMs(
-        (recordedMs) => recordedMs + firstTake.durationMs,
-      );
+    if (
+      currentExercise &&
+      firstTake &&
+      !completedExerciseIds.includes(currentExercise.id)
+    ) {
+      setCompletedRecordedMs((recordedMs) => recordedMs + firstTake.durationMs);
       setCompletedExerciseIds(completedIds);
     }
 
@@ -375,92 +375,93 @@ export default function TodayScreen() {
   return (
     <>
       <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <Text style={styles.title}>{forYouTitle}</Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={
-                state.language === "ko" ? "오늘 목표 보기" : "Show daily goal"
-              }
-              onPress={openGoalModal}
-              style={({ pressed }) => [
-                styles.goalIconButton,
-                pressed && styles.goalIconButtonPressed,
-              ]}
-            >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <View style={styles.headerTop}>
+              <Text style={styles.title}>{forYouTitle}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={text.today.showDailyGoal}
+                onPress={openGoalModal}
+                style={({ pressed }) => [
+                  styles.goalIconButton,
+                  pressed && styles.goalIconButtonPressed,
+                ]}
+              >
+                <MaterialIcons
+                  name={
+                    allGoalTargetsAchieved ? "check-circle" : "track-changes"
+                  }
+                  size={24}
+                  color={
+                    allGoalTargetsAchieved ? theme.success : theme.primaryBright
+                  }
+                />
+              </Pressable>
+            </View>
+            <View style={styles.forYouLine}>
               <MaterialIcons
-                name={allGoalTargetsAchieved ? "check-circle" : "track-changes"}
-                size={24}
-                color={
-                  allGoalTargetsAchieved ? theme.success : theme.primaryBright
-                }
+                name="auto-awesome"
+                size={26}
+                color={theme.primaryBright}
               />
-            </Pressable>
+              <Text style={styles.forYouSubtitle}>{forYouSubtitle}</Text>
+            </View>
+            <View style={styles.headerStats}>
+              <HeaderStat
+                icon="local-fire-department"
+                value={`${state.streak.current}`}
+                label={text.common.streak}
+              />
+              <HeaderStat
+                icon="shield"
+                value={
+                  state.streak.monthlyGraceUsed
+                    ? text.common.used
+                    : text.common.ready
+                }
+                label={text.common.grace}
+              />
+            </View>
           </View>
-          <View style={styles.forYouLine}>
-            <MaterialIcons
-              name="auto-awesome"
-              size={26}
-              color={theme.primaryBright}
-            />
-            <Text style={styles.forYouSubtitle}>{forYouSubtitle}</Text>
-          </View>
-          <View style={styles.headerStats}>
-            <HeaderStat
-              icon="local-fire-department"
-              value={`${state.streak.current}`}
-              label={text.common.streak}
-            />
-            <HeaderStat
-              icon="shield"
-              value={
-                state.streak.monthlyGraceUsed
-                  ? text.common.used
-                  : text.common.ready
-              }
-              label={text.common.grace}
-            />
-          </View>
-        </View>
 
-        <ForYouStack
-          dayLabel={`${text.common.day} ${state.currentDayNumber}`}
-          selectedWeekNumber={selectedWeekNumber}
-          weeks={selectableWeeks}
-          exercises={todayExerciseCards}
+          <ForYouStack
+            dayLabel={`${text.common.day} ${state.currentDayNumber}`}
+            selectedWeekNumber={selectedWeekNumber}
+            weeks={selectableWeeks}
+            exercises={todayExerciseCards}
+            language={state.language}
+            text={text}
+            onSelectWeek={(weekNumber) => {
+              setSelectedWeekNumber(weekNumber);
+              setActiveExerciseIndex(0);
+            }}
+            onMoveExercise={(fromIndex, toIndex) =>
+              reorderWeekExercise(displayedWeek.weekNumber, fromIndex, toIndex)
+            }
+            onPressExercise={startTrainingSession}
+          />
+
+          {state.placement ? (
+            <View style={styles.note}>
+              <MaterialIcons name="route" size={20} color={theme.warning} />
+              <Text style={styles.noteText}>{text.today.placementReason}</Text>
+            </View>
+          ) : null}
+        </ScrollView>
+        <DailyGoalModal
+          visible={goalModalVisible}
+          completed={dailyGoalCompleted}
+          total={dailyGoalTotal}
+          activeMs={displayedGoalRecordedMs}
+          activeTargetMs={DAILY_RECORDED_TARGET_MS}
           language={state.language}
-          onSelectWeek={(weekNumber) => {
-            setSelectedWeekNumber(weekNumber);
-            setActiveExerciseIndex(0);
-          }}
-          onMoveExercise={(fromIndex, toIndex) =>
-            reorderWeekExercise(displayedWeek.weekNumber, fromIndex, toIndex)
-          }
-          onPressExercise={startTrainingSession}
+          fade={goalFade}
+          onClose={closeGoalModal}
         />
-
-        {state.placement ? (
-          <View style={styles.note}>
-            <MaterialIcons name="route" size={20} color={theme.warning} />
-            <Text style={styles.noteText}>{text.today.placementReason}</Text>
-          </View>
-        ) : null}
-      </ScrollView>
-      <DailyGoalModal
-        visible={goalModalVisible}
-        completed={dailyGoalCompleted}
-        total={dailyGoalTotal}
-        activeMs={displayedGoalRecordedMs}
-        activeTargetMs={DAILY_RECORDED_TARGET_MS}
-        language={state.language}
-        fade={goalFade}
-        onClose={closeGoalModal}
-      />
       </SafeAreaView>
       <Modal
         animationType="slide"
@@ -541,7 +542,9 @@ function TrainingSessionModalContent({
 }) {
   const insets = useReliableSafeInsets();
   const usesFullHeightStep =
-    sessionStep === "analyzing" || sessionStep === "results";
+    sessionStep === "analyzing" ||
+    sessionStep === "results" ||
+    sessionStep === "detail";
 
   const stepContent = (
     <>
@@ -570,6 +573,7 @@ function TrainingSessionModalContent({
           icon={currentExercise.icon}
           gradient={currentExercise.gradient}
           language={language}
+          text={text.today}
           onClose={onClose}
           onStart={onStartLive}
         />
@@ -582,6 +586,7 @@ function TrainingSessionModalContent({
           exerciseTitle={currentExercise.title}
           gradient={currentExercise.gradient}
           language={language}
+          text={text}
           audioRecorder={audioRecorder}
           recorderState={recorderState}
           onComplete={onLiveComplete}
@@ -590,14 +595,13 @@ function TrainingSessionModalContent({
       ) : null}
 
       {sessionStep === "analyzing" ? (
-        <TrainingAnalyzingScreen language={language} />
+        <TrainingAnalyzingScreen text={text.today} />
       ) : null}
 
       {sessionStep === "results" ? (
         <TrainingResultsScreen
           analysis={firstAnalysis}
           fallback={analysisSource === "fallback"}
-          language={language}
           text={text}
           onRedo={onRedo}
           onDone={onDone}
@@ -690,7 +694,7 @@ function ForYouStack({
   selectedWeekNumber,
   weeks,
   exercises,
-  language,
+  text,
   onSelectWeek,
   onMoveExercise,
   onPressExercise,
@@ -699,7 +703,7 @@ function ForYouStack({
   selectedWeekNumber: number;
   weeks: typeof curriculum;
   exercises: TodayExerciseCard[];
-  language: string;
+  text: (typeof mainAppText)["en"];
   onSelectWeek: (weekNumber: number) => void;
   onMoveExercise: (fromIndex: number, toIndex: number) => void;
   onPressExercise: () => void;
@@ -709,7 +713,7 @@ function ForYouStack({
   const peekStep = 34;
   const frontOffset =
     backExercises.length > 0 ? backExercises.length * peekStep + SPACE * 2 : 0;
-  const deckHeight = frontOffset + 260;
+  const deckHeight = frontOffset + 280;
 
   return (
     <View style={styles.pickStack}>
@@ -740,9 +744,9 @@ function ForYouStack({
                   selected && styles.weekChipTextActive,
                 ]}
               >
-                {language === "ko"
-                  ? `${week.weekNumber}주`
-                  : `Week ${week.weekNumber}`}
+                {fillTemplate(text.today.weekChip, {
+                  number: week.weekNumber,
+                })}
               </Text>
             </Pressable>
           );
@@ -757,11 +761,9 @@ function ForYouStack({
           return (
             <Pressable
               key={exercise.id}
-              accessibilityLabel={
-                language === "ko"
-                  ? `${exercise.title} 보기`
-                  : `Show ${exercise.title}`
-              }
+              accessibilityLabel={fillTemplate(text.today.showExerciseA11y, {
+                title: exercise.title,
+              })}
               accessibilityRole="button"
               onPress={() => onMoveExercise(index + 1, 0)}
               style={({ pressed }) => [
@@ -793,11 +795,9 @@ function ForYouStack({
         {activeExercise ? (
           <Pressable
             key={activeExercise.id}
-            accessibilityLabel={
-              language === "ko"
-                ? `${activeExercise.title} 시작`
-                : `Start ${activeExercise.title}`
-            }
+            accessibilityLabel={fillTemplate(text.today.startExerciseA11y, {
+              title: activeExercise.title,
+            })}
             accessibilityRole="button"
             onPress={onPressExercise}
             style={({ pressed }) => [
@@ -808,7 +808,7 @@ function ForYouStack({
             ]}
           >
             <CardGradientBackground variant={activeExercise.gradient} />
-            <TaskCardContent exercise={activeExercise} language={language} />
+            <TaskCardContent exercise={activeExercise} text={text} />
           </Pressable>
         ) : null}
       </View>
@@ -832,7 +832,9 @@ function ExercisePattern({
     case "sustained-hiss":
       return (
         <View style={styles.patternRow}>
-          <View style={[styles.patternSustainLine, { backgroundColor: color }]} />
+          <View
+            style={[styles.patternSustainLine, { backgroundColor: color }]}
+          />
         </View>
       );
 
@@ -903,7 +905,9 @@ function ExercisePattern({
     case "hum-to-ah":
       return (
         <View style={styles.patternRow}>
-          <View style={[styles.patternBridgeLine, { backgroundColor: color }]} />
+          <View
+            style={[styles.patternBridgeLine, { backgroundColor: color }]}
+          />
           <View style={[styles.patternBridgePulse, { borderColor: color }]} />
           <View
             style={[styles.patternBridgeOpen, { backgroundColor: softColor }]}
@@ -959,11 +963,11 @@ function ExercisePattern({
 
 function TaskCardContent({
   exercise,
-  language,
+  text,
   muted = false,
 }: {
   exercise: TodayExerciseCard;
-  language: string;
+  text: (typeof mainAppText)["en"];
   muted?: boolean;
 }) {
   const illustration = getExerciseIllustration(exercise.id);
@@ -988,18 +992,24 @@ function TaskCardContent({
       {illustration ? (
         <View style={styles.exerciseIllustrationFrame}>
           <Image
-            accessibilityLabel={
-              language === "ko"
-                ? `${exercise.title} 운동 그림`
-                : `${exercise.title} exercise illustration`
-            }
-            resizeMode="cover"
+            accessibilityLabel={fillTemplate(
+              text.today.exerciseIllustrationA11y,
+              {
+                title: exercise.title,
+              },
+            )}
+            contentFit="cover"
+            contentPosition="top"
             source={illustration}
             style={styles.exerciseIllustration}
           />
         </View>
       ) : (
-        <ExercisePattern exerciseId={exercise.id} visual={exercise.visual} muted={muted} />
+        <ExercisePattern
+          exerciseId={exercise.id}
+          visual={exercise.visual}
+          muted={muted}
+        />
       )}
     </View>
   );
@@ -1022,9 +1032,9 @@ function DailyGoalCard({
 }) {
   const timeProgress = Math.min(1, activeMs / activeTargetMs);
   const labels = mainAppText[language];
-  const title = language === "ko" ? "오늘 목표" : "Daily Goal";
+  const title = labels.today.dailyGoal;
   const timeLabel = labels.settings.dailyTraining;
-  const exerciseLabel = language === "ko" ? "훈련" : "Exercises";
+  const exerciseLabel = labels.today.exercisesLabel;
   const timeRingColor =
     timeProgress >= 1
       ? "rgba(0, 0, 0, 0.92)"
@@ -1035,7 +1045,7 @@ function DailyGoalCard({
       <View style={styles.goalHeader}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close"
+          accessibilityLabel={labels.today.closeLabel}
           onPress={onClose}
           style={({ pressed }) => [
             headerIconButtonStyles.button,
@@ -1212,16 +1222,16 @@ function FeedbackBlock({ label, detail }: { label: string; detail: string }) {
 
 function AnalysisLoadingState({
   message,
-  language,
+  text,
 }: {
   message: string;
-  language: MainAppLanguage;
+  text: (typeof mainAppText)["en"];
 }) {
   return (
     <View style={styles.analysisLoadingPanel} accessibilityRole="progressbar">
       <SignalWave active />
       <Text style={styles.analysisLoadingTitle}>
-        {language === "ko" ? "테이크 분석 중" : "Analyzing take"}
+        {text.today.analyzingTake}
       </Text>
       <Text style={styles.analysisLoadingBody}>{message}</Text>
       <View style={styles.analysisLoadingDots}>
@@ -1481,7 +1491,7 @@ const styles = StyleSheet.create({
   exerciseBlockCard: {
     backgroundColor: theme.background,
     borderRadius: 28,
-    minHeight: 236,
+    minHeight: 256,
     overflow: "hidden",
     padding: SPACE * 5,
     position: "relative",
@@ -1521,7 +1531,7 @@ const styles = StyleSheet.create({
   },
   deckFrontCard: {
     left: 0,
-    minHeight: 260,
+    minHeight: 280,
     position: "absolute",
     right: 0,
     zIndex: 20,
@@ -1604,7 +1614,7 @@ const styles = StyleSheet.create({
   },
   taskCardInner: {
     flex: 1,
-    minHeight: 186,
+    minHeight: 206,
     position: "relative",
     zIndex: 1,
   },
@@ -1612,7 +1622,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     flex: 1,
     marginTop: SPACE * 3,
-    minHeight: 152,
+    minHeight: 172,
     overflow: "hidden",
   },
   exerciseIllustration: {

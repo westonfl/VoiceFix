@@ -2,22 +2,18 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { VoiceFixTheme as theme } from '@/constants/theme';
 import { SignalWave } from '@/features/onboarding/components';
-import type { MainAppLanguage } from '@/features/prototype/localization';
+import type { mainAppText } from '@/features/prototype/localization';
 
 type TrainingAnalyzingScreenProps = {
-  language: MainAppLanguage;
+  text: (typeof mainAppText)['en']['today'];
 };
 
-export function TrainingAnalyzingScreen({ language }: TrainingAnalyzingScreenProps) {
+export function TrainingAnalyzingScreen({ text }: TrainingAnalyzingScreenProps) {
   return (
     <View style={styles.screen} accessibilityRole="progressbar">
       <SignalWave active />
-      <Text style={styles.title}>{language === 'ko' ? '분석 중' : 'Analyzing'}</Text>
-      <Text style={styles.body}>
-        {language === 'ko'
-          ? '녹음을 검토하고 있습니다.'
-          : 'Reviewing your take…'}
-      </Text>
+      <Text style={styles.title}>{text.analyzing}</Text>
+      <Text style={styles.body}>{text.analyzingBody}</Text>
       <View style={styles.dots}>
         <View style={styles.dot} />
         <View style={styles.dot} />

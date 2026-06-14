@@ -372,7 +372,8 @@ function LanguageDropdown({
         <View style={styles.settingCopy}>
           <Text style={styles.settingLabel}>{label}</Text>
           <Text style={styles.settingValue}>
-            {selectedLanguage.label} ({selectedLanguage.shortLabel})
+            {selectedLanguage.flag} {selectedLanguage.label} (
+            {selectedLanguage.shortLabel})
           </Text>
         </View>
         <MaterialIcons
@@ -403,6 +404,7 @@ function LanguageDropdown({
                     selected && styles.languageMenuItemActive,
                   ]}
                 >
+                  <Text style={styles.languageFlag}>{option.flag}</Text>
                   <Text style={styles.languageShortLabel}>
                     {option.shortLabel}
                   </Text>
@@ -684,6 +686,9 @@ const styles = StyleSheet.create({
   },
   languageMenuItemActive: {
     backgroundColor: theme.primarySoft,
+  },
+  languageFlag: {
+    fontSize: 18,
   },
   languageShortLabel: {
     color: theme.text,

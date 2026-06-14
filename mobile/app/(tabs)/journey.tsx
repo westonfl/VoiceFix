@@ -14,6 +14,7 @@ import {
 import {
   displayPhase,
   displayWeek,
+  fillTemplate,
   mainAppText,
 } from "@/features/prototype/localization";
 import {
@@ -75,7 +76,7 @@ export default function JourneyScreen() {
                   </View>
                   <View style={styles.comingSoonCopy}>
                     <Text style={styles.comingSoonTitle}>
-                      {state.language === "ko" ? "곧 열립니다" : "Coming soon"}
+                      {text.journey.comingSoon}
                     </Text>
                   </View>
                 </View>
@@ -108,9 +109,7 @@ export default function JourneyScreen() {
                     : isCurrent
                       ? text.journey.current
                       : isNext
-                        ? state.language === "ko"
-                          ? "다음"
-                          : "Next"
+                        ? text.journey.next
                         : null;
 
                   return (
@@ -121,7 +120,7 @@ export default function JourneyScreen() {
                       stateLabel={stateLabel}
                       isCurrent={isCurrent}
                       showDivider={index < weeks.length - 1}
-                      language={state.language}
+                      text={text}
                       weekLabel={`${text.common.week} ${week.weekNumber}`}
                       onPress={() => router.push(`/week/${week.weekNumber}`)}
                     />
@@ -129,7 +128,7 @@ export default function JourneyScreen() {
                 })}
                 <TestingCenterRow
                   month={1}
-                  language={state.language}
+                  text={text}
                   passed={testPassed}
                 />
               </View>
@@ -147,7 +146,7 @@ function WeekListRow({
   stateLabel,
   isCurrent,
   showDivider,
-  language,
+  text,
   weekLabel,
   onPress,
 }: {
@@ -156,17 +155,13 @@ function WeekListRow({
   stateLabel: string | null;
   isCurrent: boolean;
   showDivider: boolean;
-  language: string;
+  text: (typeof mainAppText)["en"];
   weekLabel: string;
   onPress: () => void;
 }) {
   return (
     <Pressable
-      accessibilityHint={
-        language === "ko"
-          ? "이번 주 목표와 훈련을 엽니다"
-          : "Opens this week’s target and exercises"
-      }
+      accessibilityHint={text.journey.openWeekPlan}
       accessibilityLabel={`${weekLabel}: ${title}`}
       accessibilityRole="button"
       onPress={onPress}
@@ -207,17 +202,14 @@ function WeekListRow({
 
 function TestingCenterRow({
   month,
-  language,
+  text,
   passed = false,
 }: {
   month: number;
-  language: string;
+  text: (typeof mainAppText)["en"];
   passed?: boolean;
 }) {
-  const title =
-    language === "ko"
-      ? `${month}개월 테스트 센터`
-      : `Month ${month} Testing Center`;
+  const title = fillTemplate(text.journey.testingCenterTitle, { month });
 
   return (
     <Pressable
@@ -250,12 +242,8 @@ function TestingCenterRow({
         <Text style={styles.weekRowTitle}>{title}</Text>
         <Text style={styles.weekRowMeta}>
           {passed
-            ? language === "ko"
-              ? "월간 체크포인트 · 통과"
-              : "Monthly checkpoint · Passed"
-            : language === "ko"
-              ? "월간 체크포인트"
-              : "Monthly checkpoint"}
+            ? text.journey.monthlyCheckpointPassed
+            : text.journey.monthlyCheckpoint}
         </Text>
       </View>
       <MaterialIcons name="chevron-right" size={20} color={theme.textSubtle} />

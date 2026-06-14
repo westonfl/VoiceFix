@@ -1,20 +1,29 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { MaterialIcons } from "@expo/vector-icons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { VoiceFixTheme as theme } from '@/constants/theme';
+import { VoiceFixTheme as theme } from "@/constants/theme";
 
-import { CardGradientBackground, type CardGradientVariant } from './cardGradientBackground';
-import type { IconName, OnboardingOption } from './types';
+import {
+  CardGradientBackground,
+  type CardGradientVariant,
+} from "./cardGradientBackground";
+import type { IconName, OnboardingOption } from "./types";
 
 export { CardGradientBackground, type CardGradientVariant };
 
-const waveform = [24, 52, 36, 78, 44, 92, 58, 34, 72, 102, 48, 30, 66, 42, 84, 38];
+const waveform = [
+  24, 52, 36, 78, 44, 92, 58, 34, 72, 102, 48, 30, 66, 42, 84, 38,
+];
 
 export function StudioMark({ large = false }: { large?: boolean }) {
   return (
     <View style={[styles.mark, large && styles.markLarge]}>
       <View style={styles.markGlow} />
-      <MaterialIcons name="graphic-eq" size={large ? 40 : 26} color={theme.primaryBright} />
+      <MaterialIcons
+        name="graphic-eq"
+        size={large ? 40 : 26}
+        color={theme.primaryBright}
+      />
     </View>
   );
 }
@@ -29,7 +38,10 @@ export function SignalWave({ active = false }: { active?: boolean }) {
             styles.waveBar,
             {
               height: active ? height : Math.max(16, height * 0.62),
-              backgroundColor: index === 9 || index === 14 ? theme.energy : theme.primaryBright,
+              backgroundColor:
+                index === 9 || index === 14
+                  ? theme.energy
+                  : theme.primaryBright,
               opacity: active ? (index % 3 === 0 ? 0.96 : 0.66) : 0.36,
             },
           ]}
@@ -50,9 +62,13 @@ export function ScreenHeader({
 }) {
   return (
     <View style={styles.headerCopy}>
-      <View style={styles.speechBubble}>
-        <View style={styles.speechTail} />
-        <Text style={styles.title}>{title}</Text>
+      <View style={styles.speechBubbleRow}>
+        <View style={styles.speechTailSlot}>
+          <View style={styles.speechTail} />
+        </View>
+        <View style={styles.speechBubble}>
+          <Text style={styles.title}>{title}</Text>
+        </View>
       </View>
       <Text style={styles.eyebrow}>{eyebrow}</Text>
       {body ? <Text style={styles.body}>{body}</Text> : null}
@@ -62,9 +78,9 @@ export function ScreenHeader({
 
 export function PrimaryButton({
   label,
-  icon = 'arrow-forward',
+  icon = "arrow-forward",
   disabled = false,
-  variant = 'integration',
+  variant = "integration",
   onPress,
 }: {
   label: string;
@@ -82,17 +98,28 @@ export function PrimaryButton({
         styles.primaryButton,
         pressed && styles.primaryButtonPressed,
         disabled && styles.disabled,
-      ]}>
+      ]}
+    >
       <CardGradientBackground variant={variant} />
       <Text style={styles.primaryButtonText}>{label}</Text>
-      <MaterialIcons name={icon} size={20} color={theme.text} />
+      <MaterialIcons name={icon} size={20} color={theme.textMuted} />
     </Pressable>
   );
 }
 
-export function SecondaryButton({ label, onPress }: { label: string; onPress: () => void }) {
+export function SecondaryButton({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.secondaryButton}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={styles.secondaryButton}
+    >
       <Text style={styles.secondaryButtonText}>{label}</Text>
     </Pressable>
   );
@@ -116,16 +143,21 @@ export function OptionCard({
         styles.option,
         selected && styles.optionSelected,
         pressed && styles.optionPressed,
-      ]}>
+      ]}
+    >
       <View style={[styles.optionIcon, selected && styles.optionIconSelected]}>
-        <MaterialIcons name={option.icon} size={22} color={selected ? theme.backgroundDeep : theme.primaryBright} />
+        <MaterialIcons
+          name={option.icon}
+          size={22}
+          color={selected ? theme.backgroundDeep : theme.primaryBright}
+        />
       </View>
       <View style={styles.optionText}>
         <Text style={styles.optionLabel}>{option.label}</Text>
         <Text style={styles.optionDetail}>{option.detail}</Text>
       </View>
       <MaterialIcons
-        name={selected ? 'check-circle' : 'radio-button-unchecked'}
+        name={selected ? "check-circle" : "radio-button-unchecked"}
         size={22}
         color={selected ? theme.success : theme.textSubtle}
       />
@@ -141,15 +173,24 @@ export function InfoList({
   return (
     <View style={styles.infoList}>
       {items.map((item, index) => {
-        const value = typeof item === 'string' ? { label: item, detail: '', icon: 'check' as IconName } : item;
+        const value =
+          typeof item === "string"
+            ? { label: item, detail: "", icon: "check" as IconName }
+            : item;
         return (
           <View key={`${value.label}-${index}`} style={styles.infoRow}>
             <View style={styles.infoIcon}>
-              <MaterialIcons name={value.icon} size={18} color={theme.primaryBright} />
+              <MaterialIcons
+                name={value.icon}
+                size={18}
+                color={theme.primaryBright}
+              />
             </View>
             <View style={styles.infoText}>
               <Text style={styles.infoLabel}>{value.label}</Text>
-              {value.detail ? <Text style={styles.infoDetail}>{value.detail}</Text> : null}
+              {value.detail ? (
+                <Text style={styles.infoDetail}>{value.detail}</Text>
+              ) : null}
             </View>
           </View>
         );
@@ -158,9 +199,21 @@ export function InfoList({
   );
 }
 
-export function Pill({ label, tone = 'signal' }: { label: string; tone?: 'signal' | 'violet' | 'green' | 'amber' }) {
+export function Pill({
+  label,
+  tone = "signal",
+}: {
+  label: string;
+  tone?: "signal" | "violet" | "green" | "amber";
+}) {
   const color =
-    tone === 'violet' ? theme.journal : tone === 'green' ? theme.success : tone === 'amber' ? theme.warning : theme.primaryBright;
+    tone === "violet"
+      ? theme.journal
+      : tone === "green"
+        ? theme.success
+        : tone === "amber"
+          ? theme.warning
+          : theme.primaryBright;
 
   return (
     <View style={[styles.pill, { borderColor: color }]}>
@@ -171,12 +224,12 @@ export function Pill({ label, tone = 'signal' }: { label: string; tone?: 'signal
 
 const styles = StyleSheet.create({
   mark: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: theme.surfaceRaised,
     borderRadius: 24,
     height: 56,
-    justifyContent: 'center',
-    overflow: 'hidden',
+    justifyContent: "center",
+    overflow: "hidden",
     width: 56,
   },
   markLarge: {
@@ -185,18 +238,18 @@ const styles = StyleSheet.create({
     width: 112,
   },
   markGlow: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderRadius: 999,
     height: 120,
-    position: 'absolute',
+    position: "absolute",
     width: 120,
   },
   wave: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 5,
     height: 112,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   waveBar: {
     borderRadius: 999,
@@ -208,34 +261,43 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: theme.textSubtle,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 0,
-    textAlign: 'center',
+    textAlign: "center",
+  },
+  speechBubbleRow: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    maxWidth: "88%",
+  },
+  speechTailSlot: {
+    alignSelf: "stretch",
+    justifyContent: "center",
+    width: 0,
+    zIndex: 1,
   },
   speechBubble: {
-    alignSelf: 'flex-start',
     backgroundColor: theme.text,
     borderRadius: 42,
-    borderBottomLeftRadius: 10,
-    maxWidth: '82%',
+    flex: 1,
     minHeight: 108,
+    overflow: "visible",
     paddingHorizontal: 32,
     paddingVertical: 28,
-    position: 'relative',
   },
   speechTail: {
     backgroundColor: theme.text,
-    bottom: -1,
-    height: 32,
-    left: -12,
-    position: 'absolute',
-    transform: [{ skewX: '-32deg' }],
-    width: 38,
+    height: 18,
+    left: -9,
+    position: "absolute",
+    transform: [{ rotate: "45deg" }],
+    width: 18,
   },
   title: {
     color: theme.background,
     fontSize: 32,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 0,
     lineHeight: 39,
   },
@@ -245,49 +307,49 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   primaryButton: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: theme.background,
-    borderColor: theme.text,
+    borderColor: "rgba(69, 69, 77, 0.38)",
     borderRadius: 30,
-    borderWidth: 3,
-    flexDirection: 'row',
+    borderWidth: 2,
+    flexDirection: "row",
     gap: 10,
-    justifyContent: 'center',
+    justifyContent: "center",
     minHeight: 64,
-    overflow: 'hidden',
+    overflow: "hidden",
     paddingHorizontal: 18,
   },
   primaryButtonPressed: {
     opacity: 0.76,
   },
   primaryButtonText: {
-    color: theme.text,
+    color: theme.textMuted,
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: "900",
     zIndex: 1,
   },
   disabled: {
     opacity: 0.42,
   },
   secondaryButton: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 30,
-    justifyContent: 'center',
+    justifyContent: "center",
     minHeight: 54,
     paddingHorizontal: 16,
   },
   secondaryButtonText: {
     color: theme.textSubtle,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   option: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: theme.surfaceRaised,
-    borderColor: 'transparent',
+    borderColor: "transparent",
     borderRadius: 24,
     borderWidth: 2,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 16,
     minHeight: 92,
     paddingHorizontal: 24,
@@ -301,11 +363,11 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.99 }],
   },
   optionIcon: {
-    alignItems: 'center',
-    backgroundColor: 'transparent',
+    alignItems: "center",
+    backgroundColor: "transparent",
     borderRadius: 18,
     height: 44,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 44,
   },
   optionIconSelected: {
@@ -318,7 +380,7 @@ const styles = StyleSheet.create({
   optionLabel: {
     color: theme.text,
     fontSize: 21,
-    fontWeight: '900',
+    fontWeight: "900",
     lineHeight: 26,
   },
   optionDetail: {
@@ -330,19 +392,19 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   infoRow: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: theme.surfaceRaised,
     borderRadius: 24,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     padding: 18,
   },
   infoIcon: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: theme.background,
     borderRadius: 16,
     height: 36,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 36,
   },
   infoText: {
@@ -352,7 +414,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     color: theme.text,
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: "900",
   },
   infoDetail: {
     color: theme.textMuted,
@@ -360,7 +422,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   pill: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     backgroundColor: theme.surfaceRaised,
     borderRadius: 999,
     borderWidth: 1,
@@ -369,6 +431,6 @@ const styles = StyleSheet.create({
   },
   pillText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });
