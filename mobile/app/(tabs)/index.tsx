@@ -433,7 +433,6 @@ export default function TodayScreen() {
             selectedWeekNumber={selectedWeekNumber}
             weeks={selectableWeeks}
             exercises={todayExerciseCards}
-            language={state.language}
             text={text}
             onSelectWeek={(weekNumber) => {
               setSelectedWeekNumber(weekNumber);

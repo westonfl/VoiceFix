@@ -567,7 +567,7 @@ function TestCheckCard({
           <MaterialIcons
             name="refresh"
             size={19}
-            color={theme.text}
+            color={theme.textMuted}
             style={styles.buttonIcon}
           />
         ) : null}
@@ -633,7 +633,7 @@ function PrimaryAction({
     >
       <CardGradientBackground muted={disabled} variant="integration" />
       <Text style={styles.primaryText}>{label}</Text>
-      <MaterialIcons name={icon} size={22} color={theme.text} />
+      <MaterialIcons name={icon} size={22} color={theme.textMuted} />
     </Pressable>
   );
 }
@@ -837,7 +837,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "stretch",
     backgroundColor: theme.background,
-    borderColor: theme.text,
+    borderColor: "rgba(69, 69, 77, 0.38)",
     borderWidth: 2,
     borderRadius: 999,
     flexDirection: "row",
@@ -858,7 +858,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   recordButtonText: {
-    color: theme.text,
+    color: theme.textMuted,
     fontSize: 14,
     fontWeight: "900",
     zIndex: 1,
@@ -872,9 +872,9 @@ const styles = StyleSheet.create({
   primaryButton: {
     alignItems: "center",
     backgroundColor: theme.background,
-    borderColor: theme.text,
+    borderColor: "rgba(69, 69, 77, 0.38)",
     borderRadius: 28,
-    borderWidth: 3,
+    borderWidth: 2,
     flexDirection: "row",
     gap: 10,
     justifyContent: "center",
@@ -889,7 +889,7 @@ const styles = StyleSheet.create({
     opacity: 0.52,
   },
   primaryText: {
-    color: theme.text,
+    color: theme.textMuted,
     fontSize: 20,
     fontWeight: "900",
     zIndex: 1,

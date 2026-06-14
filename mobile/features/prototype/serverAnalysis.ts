@@ -2,6 +2,8 @@ import { getAnalysisServerUrl } from '@/constants/env';
 
 import type { MainAppLanguage } from './localization';
 
+const ANALYSIS_REQUEST_TIMEOUT_MS = 45_000;
+
 export type MonthOneDrillId =
   | 'sustained_hiss'
   | 'gentle_hum'
@@ -61,6 +63,15 @@ export class AnalysisServerError extends Error {
   }
 }
 
+function isAbortError(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    error.name === 'AbortError'
+  );
+}
+
 type AnalyzeTakeInput = {
   uri: string;
   drillId: MonthOneDrillId;
@@ -105,7 +116,7 @@ export async function analyzeMonthOneTake(input: AnalyzeTakeInput): Promise<Mont
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 9000);
+  const timeout = setTimeout(() => controller.abort(), ANALYSIS_REQUEST_TIMEOUT_MS);
 
   try {
     const response = await fetch(`${getAnalysisServerUrl()}/api/month-one/analyze`, {
@@ -126,6 +137,16 @@ export async function analyzeMonthOneTake(input: AnalyzeTakeInput): Promise<Mont
     }
 
     return (await response.json()) as MonthOneAnalysisResponse;
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new AnalysisServerError(
+        `Analysis server timed out after ${ANALYSIS_REQUEST_TIMEOUT_MS / 1000}s`,
+        undefined,
+        { timeoutMs: ANALYSIS_REQUEST_TIMEOUT_MS },
+      );
+    }
+
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
