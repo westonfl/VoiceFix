@@ -3,7 +3,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { VoiceFixTheme as theme } from '@/constants/theme';
 
+import { CardGradientBackground, type CardGradientVariant } from './cardGradientBackground';
 import type { IconName, OnboardingOption } from './types';
+
+export { CardGradientBackground, type CardGradientVariant };
 
 const waveform = [24, 52, 36, 78, 44, 92, 58, 34, 72, 102, 48, 30, 66, 42, 84, 38];
 
@@ -47,8 +50,11 @@ export function ScreenHeader({
 }) {
   return (
     <View style={styles.headerCopy}>
+      <View style={styles.speechBubble}>
+        <View style={styles.speechTail} />
+        <Text style={styles.title}>{title}</Text>
+      </View>
       <Text style={styles.eyebrow}>{eyebrow}</Text>
-      <Text style={styles.title}>{title}</Text>
       {body ? <Text style={styles.body}>{body}</Text> : null}
     </View>
   );
@@ -58,11 +64,13 @@ export function PrimaryButton({
   label,
   icon = 'arrow-forward',
   disabled = false,
+  variant = 'integration',
   onPress,
 }: {
   label: string;
   icon?: IconName;
   disabled?: boolean;
+  variant?: CardGradientVariant;
   onPress: () => void;
 }) {
   return (
@@ -75,8 +83,9 @@ export function PrimaryButton({
         pressed && styles.primaryButtonPressed,
         disabled && styles.disabled,
       ]}>
+      <CardGradientBackground variant={variant} />
       <Text style={styles.primaryButtonText}>{label}</Text>
-      <MaterialIcons name={icon} size={20} color={theme.backgroundDeep} />
+      <MaterialIcons name={icon} size={20} color={theme.text} />
     </Pressable>
   );
 }
@@ -163,26 +172,24 @@ export function Pill({ label, tone = 'signal' }: { label: string; tone?: 'signal
 const styles = StyleSheet.create({
   mark: {
     alignItems: 'center',
-    backgroundColor: theme.surface,
-    borderColor: 'rgba(50, 230, 226, 0.26)',
-    borderRadius: 20,
-    borderWidth: 1,
-    height: 52,
+    backgroundColor: theme.surfaceRaised,
+    borderRadius: 24,
+    height: 56,
     justifyContent: 'center',
     overflow: 'hidden',
-    width: 52,
+    width: 56,
   },
   markLarge: {
-    borderRadius: 32,
-    height: 84,
-    width: 84,
+    borderRadius: 44,
+    height: 112,
+    width: 112,
   },
   markGlow: {
-    backgroundColor: 'rgba(50, 230, 226, 0.16)',
-    borderRadius: 80,
-    height: 92,
+    backgroundColor: 'transparent',
+    borderRadius: 999,
+    height: 120,
     position: 'absolute',
-    width: 92,
+    width: 120,
   },
   wave: {
     alignItems: 'center',
@@ -196,20 +203,41 @@ const styles = StyleSheet.create({
     width: 6,
   },
   headerCopy: {
-    gap: 10,
+    gap: 18,
   },
   eyebrow: {
-    color: theme.primaryBright,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0,
-  },
-  title: {
-    color: theme.text,
-    fontSize: 30,
+    color: theme.textSubtle,
+    fontSize: 16,
     fontWeight: '800',
     letterSpacing: 0,
-    lineHeight: 36,
+    textAlign: 'center',
+  },
+  speechBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: theme.text,
+    borderRadius: 42,
+    borderBottomLeftRadius: 10,
+    maxWidth: '82%',
+    minHeight: 108,
+    paddingHorizontal: 32,
+    paddingVertical: 28,
+    position: 'relative',
+  },
+  speechTail: {
+    backgroundColor: theme.text,
+    bottom: -1,
+    height: 32,
+    left: -12,
+    position: 'absolute',
+    transform: [{ skewX: '-32deg' }],
+    width: 38,
+  },
+  title: {
+    color: theme.background,
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: 0,
+    lineHeight: 39,
   },
   body: {
     color: theme.textMuted,
@@ -218,67 +246,70 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     alignItems: 'center',
-    backgroundColor: theme.primary,
-    borderRadius: 12,
+    backgroundColor: theme.background,
+    borderColor: theme.text,
+    borderRadius: 30,
+    borderWidth: 3,
     flexDirection: 'row',
     gap: 10,
     justifyContent: 'center',
-    minHeight: 54,
+    minHeight: 64,
+    overflow: 'hidden',
     paddingHorizontal: 18,
   },
   primaryButtonPressed: {
-    backgroundColor: theme.primaryPressed,
+    opacity: 0.76,
   },
   primaryButtonText: {
-    color: theme.backgroundDeep,
-    fontSize: 16,
-    fontWeight: '800',
+    color: theme.text,
+    fontSize: 20,
+    fontWeight: '900',
+    zIndex: 1,
   },
   disabled: {
-    opacity: 0.45,
+    opacity: 0.42,
   },
   secondaryButton: {
     alignItems: 'center',
-    borderColor: 'rgba(50, 230, 226, 0.32)',
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 30,
     justifyContent: 'center',
-    minHeight: 50,
+    minHeight: 54,
     paddingHorizontal: 16,
   },
   secondaryButtonText: {
-    color: theme.primaryBright,
-    fontSize: 15,
-    fontWeight: '700',
+    color: theme.textSubtle,
+    fontSize: 18,
+    fontWeight: '800',
   },
   option: {
     alignItems: 'center',
-    backgroundColor: theme.surface,
-    borderColor: 'rgba(184, 199, 211, 0.12)',
-    borderRadius: 8,
-    borderWidth: 1,
+    backgroundColor: theme.surfaceRaised,
+    borderColor: 'transparent',
+    borderRadius: 24,
+    borderWidth: 2,
     flexDirection: 'row',
-    gap: 12,
-    minHeight: 90,
-    padding: 14,
+    gap: 16,
+    minHeight: 92,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
   optionSelected: {
-    backgroundColor: theme.primarySoft,
-    borderColor: 'rgba(50, 230, 226, 0.58)',
+    backgroundColor: theme.background,
+    borderColor: theme.text,
   },
   optionPressed: {
     transform: [{ scale: 0.99 }],
   },
   optionIcon: {
     alignItems: 'center',
-    backgroundColor: theme.surfaceRaised,
+    backgroundColor: 'transparent',
     borderRadius: 18,
     height: 44,
     justifyContent: 'center',
     width: 44,
   },
   optionIconSelected: {
-    backgroundColor: theme.primaryBright,
+    backgroundColor: theme.text,
   },
   optionText: {
     flex: 1,
@@ -286,31 +317,29 @@ const styles = StyleSheet.create({
   },
   optionLabel: {
     color: theme.text,
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 21,
+    fontSize: 21,
+    fontWeight: '900',
+    lineHeight: 26,
   },
   optionDetail: {
     color: theme.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 19,
   },
   infoList: {
     gap: 10,
   },
   infoRow: {
     alignItems: 'center',
-    backgroundColor: theme.surface,
-    borderColor: 'rgba(184, 199, 211, 0.12)',
-    borderRadius: 8,
-    borderWidth: 1,
+    backgroundColor: theme.surfaceRaised,
+    borderRadius: 24,
     flexDirection: 'row',
     gap: 12,
-    padding: 14,
+    padding: 18,
   },
   infoIcon: {
     alignItems: 'center',
-    backgroundColor: theme.primarySoft,
+    backgroundColor: theme.background,
     borderRadius: 16,
     height: 36,
     justifyContent: 'center',
@@ -322,8 +351,8 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     color: theme.text,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '900',
   },
   infoDetail: {
     color: theme.textMuted,

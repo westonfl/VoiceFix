@@ -11,7 +11,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.ov92.VoiceFix",
-      "appleTeamId": "X79VZ448P2"
+      "appleTeamId": "X79VZ448P2",
+      "infoPlist": {
+        "NSUserNotificationsUsageDescription": "VoiceFix sends a daily reminder at your chosen training time."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -40,6 +43,12 @@
         }
       ],
       [
+        "expo-notifications",
+        {
+          "sounds": []
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
@@ -50,7 +59,8 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

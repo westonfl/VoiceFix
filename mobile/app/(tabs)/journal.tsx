@@ -1,13 +1,17 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useAudioPlayer } from 'expo-audio';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useAudioPlayer } from "expo-audio";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { VoiceFixTheme as theme } from '@/constants/theme';
-import { formatDuration } from '@/features/prototype/analysis';
-import { getWeek } from '@/features/prototype/curriculum';
-import { displaySessionText, displayWeek, mainAppText } from '@/features/prototype/localization';
-import { usePrototype } from '@/features/prototype/state';
+import { VoiceFixTheme as theme } from "@/constants/theme";
+import { formatDuration } from "@/features/prototype/analysis";
+import { getWeek } from "@/features/prototype/curriculum";
+import {
+  displaySessionText,
+  displayWeek,
+  mainAppText,
+} from "@/features/prototype/localization";
+import { usePrototype } from "@/features/prototype/state";
 
 export default function JournalScreen() {
   const { state } = usePrototype();
@@ -16,7 +20,10 @@ export default function JournalScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.kicker}>{text.journal.kicker}</Text>
           <Text style={styles.title}>{text.journal.title}</Text>
@@ -26,7 +33,11 @@ export default function JournalScreen() {
         {!hasClips ? (
           <View style={styles.emptyPanel}>
             <View style={styles.emptyIcon}>
-              <MaterialIcons name="graphic-eq" size={28} color={theme.primaryBright} />
+              <MaterialIcons
+                name="graphic-eq"
+                size={28}
+                color={theme.primaryBright}
+              />
             </View>
             <Text style={styles.emptyTitle}>{text.journal.emptyTitle}</Text>
             <Text style={styles.body}>{text.journal.emptyBody}</Text>
@@ -35,10 +46,19 @@ export default function JournalScreen() {
 
         {hasClips ? (
           <View style={styles.comparePanel}>
-            <Text style={styles.panelTitle}>{text.journal.latestComparison}</Text>
+            <Text style={styles.panelTitle}>
+              {text.journal.latestComparison}
+            </Text>
             <View style={styles.compareGrid}>
-              <TakeBlock label={text.journal.firstTake} value={formatDuration(state.savedClips[0].firstDurationMs)} />
-              <TakeBlock label={text.journal.retry} value={formatDuration(state.savedClips[0].retryDurationMs)} accent />
+              <TakeBlock
+                label={text.journal.firstTake}
+                value={formatDuration(state.savedClips[0].firstDurationMs)}
+              />
+              <TakeBlock
+                label={text.journal.retry}
+                value={formatDuration(state.savedClips[0].retryDurationMs)}
+                accent
+              />
             </View>
           </View>
         ) : null}
@@ -50,12 +70,22 @@ export default function JournalScreen() {
         </View>
 
         <View style={styles.monthPanel}>
-          <Text style={styles.panelTitle}>{text.journal.monthlyCheckpoints}</Text>
-          {[text.journal.checkpointOne, text.journal.checkpointTwo, text.journal.checkpointThree].map((item, index) => (
+          <Text style={styles.panelTitle}>
+            {text.journal.monthlyCheckpoints}
+          </Text>
+          {[
+            text.journal.checkpointOne,
+            text.journal.checkpointTwo,
+            text.journal.checkpointThree,
+          ].map((item, index) => (
             <View key={item} style={styles.checkpointRow}>
               <Text style={styles.checkpointNumber}>{index + 1}</Text>
               <Text style={styles.checkpointText}>{item}</Text>
-              <Text style={styles.checkpointState}>{index === 0 && hasClips ? text.journal.open : text.journal.later}</Text>
+              <Text style={styles.checkpointState}>
+                {index === 0 && hasClips
+                  ? text.journal.open
+                  : text.journal.later}
+              </Text>
             </View>
           ))}
         </View>
@@ -64,7 +94,15 @@ export default function JournalScreen() {
   );
 }
 
-function TakeBlock({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+function TakeBlock({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
   return (
     <View style={[styles.takeBlock, accent && styles.takeBlockAccent]}>
       <Text style={styles.takeLabel}>{label}</Text>
@@ -73,15 +111,21 @@ function TakeBlock({ label, value, accent = false }: { label: string; value: str
   );
 }
 
-function ClipCard({ clip }: { clip: ReturnType<typeof usePrototype>['state']['savedClips'][number] }) {
+function ClipCard({
+  clip,
+}: {
+  clip: ReturnType<typeof usePrototype>["state"]["savedClips"][number];
+}) {
   const firstPlayer = useAudioPlayer(clip.firstTakeUri ?? null);
   const retryPlayer = useAudioPlayer(clip.retryTakeUri ?? null);
   const { state } = usePrototype();
   const text = mainAppText[state.language];
   const clipWeek = getWeek(clip.weekNumber);
   const clipWeekDisplay = displayWeek(clipWeek, state.language);
-  const clipRole = clip.title.split(' - ')[1];
-  const clipTitle = clipRole ? `${clipWeekDisplay.title} - ${displaySessionText(clipRole, state.language)}` : clipWeekDisplay.title;
+  const clipRole = clip.title.split(" - ")[1];
+  const clipTitle = clipRole
+    ? `${clipWeekDisplay.title} - ${displaySessionText(clipRole, state.language)}`
+    : clipWeekDisplay.title;
 
   function playFirst() {
     firstPlayer.seekTo(0);
@@ -101,32 +145,73 @@ function ClipCard({ clip }: { clip: ReturnType<typeof usePrototype>['state']['sa
         </View>
         <View style={styles.clipCopy}>
           <Text style={styles.clipTitle}>{clipTitle}</Text>
-          <Text style={styles.clipMeta}>{text.common.week} {clip.weekNumber} · {text.common.day} {clip.dayNumber}</Text>
+          <Text style={styles.clipMeta}>
+            {text.common.week} {clip.weekNumber} · {text.common.day}{" "}
+            {clip.dayNumber}
+          </Text>
         </View>
       </View>
       <Text style={styles.clipText}>{clip.observation}</Text>
       <Text style={styles.clipResult}>{clip.comparison}</Text>
       <View style={styles.playRow}>
-        <PlayButton label={text.journal.first} disabled={!clip.firstTakeUri} onPress={playFirst} />
-        <PlayButton label={text.journal.retry} disabled={!clip.retryTakeUri} onPress={playRetry} />
+        <PlayButton
+          label={text.journal.first}
+          disabled={!clip.firstTakeUri}
+          onPress={playFirst}
+        />
+        <PlayButton
+          label={text.journal.retry}
+          disabled={!clip.retryTakeUri}
+          onPress={playRetry}
+        />
       </View>
       <View style={styles.uriBlock}>
-        <Text style={styles.uriText}>{text.journal.first}: {clip.firstTakeUri ? text.journal.savedLocally : text.journal.noUri}</Text>
-        <Text style={styles.uriText}>{text.journal.retry}: {clip.retryTakeUri ? text.journal.savedLocally : text.journal.noUri}</Text>
+        <Text style={styles.uriText}>
+          {text.journal.first}:{" "}
+          {clip.firstTakeUri ? text.journal.savedLocally : text.journal.noUri}
+        </Text>
+        <Text style={styles.uriText}>
+          {text.journal.retry}:{" "}
+          {clip.retryTakeUri ? text.journal.savedLocally : text.journal.noUri}
+        </Text>
       </View>
     </View>
   );
 }
 
-function PlayButton({ label, disabled, onPress }: { label: string; disabled: boolean; onPress: () => void }) {
+function PlayButton({
+  label,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  disabled: boolean;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.playButton, pressed && styles.playButtonPressed, disabled && styles.playButtonDisabled]}>
-      <MaterialIcons name="play-arrow" size={18} color={disabled ? theme.textSubtle : theme.backgroundDeep} />
-      <Text style={[styles.playButtonText, disabled && styles.playButtonTextDisabled]}>{label}</Text>
+      style={({ pressed }) => [
+        styles.playButton,
+        pressed && styles.playButtonPressed,
+        disabled && styles.playButtonDisabled,
+      ]}
+    >
+      <MaterialIcons
+        name="play-arrow"
+        size={18}
+        color={disabled ? theme.textSubtle : theme.backgroundDeep}
+      />
+      <Text
+        style={[
+          styles.playButtonText,
+          disabled && styles.playButtonTextDisabled,
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -148,13 +233,13 @@ const styles = StyleSheet.create({
   kicker: {
     color: theme.journal,
     fontSize: 13,
-    fontWeight: '800',
-    textTransform: 'uppercase',
+    fontWeight: "800",
+    textTransform: "uppercase",
   },
   title: {
     color: theme.text,
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: "800",
     lineHeight: 38,
   },
   body: {
@@ -163,31 +248,31 @@ const styles = StyleSheet.create({
     lineHeight: 23,
   },
   emptyPanel: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     backgroundColor: theme.surfaceRaised,
-    borderColor: 'rgba(155, 124, 255, 0.28)',
-    borderRadius: 8,
+    borderColor: "rgba(86, 108, 123, 0.26)",
+    borderRadius: 24,
     borderWidth: 1,
     gap: 10,
     padding: 18,
   },
   emptyIcon: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(155, 124, 255, 0.14)',
+    alignItems: "center",
+    backgroundColor: "rgba(86, 108, 123, 0.12)",
     borderRadius: 22,
     height: 50,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 50,
   },
   emptyTitle: {
     color: theme.text,
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   comparePanel: {
     backgroundColor: theme.surfaceRaised,
-    borderColor: 'rgba(155, 124, 255, 0.28)',
-    borderRadius: 8,
+    borderColor: "rgba(86, 108, 123, 0.26)",
+    borderRadius: 24,
     borderWidth: 1,
     gap: 12,
     padding: 16,
@@ -195,33 +280,33 @@ const styles = StyleSheet.create({
   panelTitle: {
     color: theme.text,
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   compareGrid: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   takeBlock: {
     backgroundColor: theme.surface,
-    borderColor: 'rgba(184, 199, 211, 0.12)',
-    borderRadius: 8,
+    borderColor: "rgba(0, 0, 0, 0.08)",
+    borderRadius: 24,
     borderWidth: 1,
     flex: 1,
     padding: 14,
   },
   takeBlockAccent: {
-    borderColor: 'rgba(100, 217, 154, 0.42)',
+    borderColor: "rgba(0, 0, 0, 0.16)",
   },
   takeLabel: {
     color: theme.textSubtle,
     fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'uppercase',
+    fontWeight: "800",
+    textTransform: "uppercase",
   },
   takeValue: {
     color: theme.text,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: "800",
     marginTop: 6,
   },
   clipList: {
@@ -229,23 +314,23 @@ const styles = StyleSheet.create({
   },
   clipCard: {
     backgroundColor: theme.surface,
-    borderColor: 'rgba(184, 199, 211, 0.12)',
-    borderRadius: 8,
+    borderColor: "rgba(0, 0, 0, 0.08)",
+    borderRadius: 24,
     borderWidth: 1,
     gap: 12,
     padding: 15,
   },
   clipTop: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 12,
   },
   clipIcon: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(155, 124, 255, 0.14)',
-    borderRadius: 18,
+    alignItems: "center",
+    backgroundColor: "rgba(86, 108, 123, 0.12)",
+    borderRadius: 24,
     height: 40,
-    justifyContent: 'center',
+    justifyContent: "center",
     width: 40,
   },
   clipCopy: {
@@ -255,12 +340,12 @@ const styles = StyleSheet.create({
   clipTitle: {
     color: theme.text,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   clipMeta: {
     color: theme.textSubtle,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   clipText: {
     color: theme.textMuted,
@@ -270,20 +355,20 @@ const styles = StyleSheet.create({
   clipResult: {
     color: theme.success,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   playRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   playButton: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: theme.journal,
-    borderRadius: 10,
+    borderRadius: 24,
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 6,
-    justifyContent: 'center',
+    justifyContent: "center",
     minHeight: 42,
   },
   playButtonPressed: {
@@ -291,58 +376,58 @@ const styles = StyleSheet.create({
   },
   playButtonDisabled: {
     backgroundColor: theme.surfaceRaised,
-    borderColor: 'rgba(184, 199, 211, 0.12)',
+    borderColor: "rgba(0, 0, 0, 0.08)",
     borderWidth: 1,
   },
   playButtonText: {
     color: theme.backgroundDeep,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   playButtonTextDisabled: {
     color: theme.textSubtle,
   },
   uriBlock: {
     backgroundColor: theme.surfaceRaised,
-    borderRadius: 8,
+    borderRadius: 24,
     gap: 4,
     padding: 10,
   },
   uriText: {
     color: theme.textSubtle,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   monthPanel: {
     backgroundColor: theme.surfaceRaised,
-    borderColor: 'rgba(184, 199, 211, 0.12)',
-    borderRadius: 8,
+    borderColor: "rgba(0, 0, 0, 0.08)",
+    borderRadius: 24,
     borderWidth: 1,
     gap: 10,
     padding: 16,
   },
   checkpointRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     gap: 10,
     minHeight: 40,
   },
   checkpointNumber: {
     color: theme.journal,
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: "800",
     width: 18,
   },
   checkpointText: {
     color: theme.text,
     flex: 1,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   checkpointState: {
     color: theme.textSubtle,
     fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
+    fontWeight: "800",
+    textTransform: "uppercase",
   },
 });

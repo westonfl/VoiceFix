@@ -3,72 +3,77 @@
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
  */
 
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
-const tintColorLight = '#17C9D2';
-const tintColorDark = '#32E6E2';
+const tintColor = "#000000";
 
 export const Colors = {
   light: {
-    text: '#F1F7FA',
-    background: '#0B1018',
-    tint: tintColorLight,
-    icon: '#788897',
-    tabIconDefault: '#788897',
-    tabIconSelected: tintColorLight,
+    text: "#000000",
+    background: "#FFFFFF",
+    tint: tintColor,
+    icon: "#000000",
+    tabIconDefault: "#000000",
+    tabIconSelected: tintColor,
   },
   dark: {
-    text: '#F1F7FA',
-    background: '#070A10',
-    tint: tintColorDark,
-    icon: '#788897',
-    tabIconDefault: '#788897',
-    tabIconSelected: tintColorDark,
+    text: "#000000",
+    background: "#FFFFFF",
+    tint: tintColor,
+    icon: "#000000",
+    tabIconDefault: "#000000",
+    tabIconSelected: tintColor,
   },
 };
 
 export const VoiceFixTheme = {
-  background: '#0B1018',
-  backgroundDeep: '#070A10',
-  surface: '#151E2B',
-  surfaceRaised: '#101722',
-  surfacePressed: '#203044',
-  text: '#F1F7FA',
-  textMuted: '#B8C7D3',
-  textSubtle: '#788897',
-  border: '#203044',
-  primary: '#17C9D2',
-  primaryBright: '#32E6E2',
-  primaryPressed: '#0C7F8B',
-  primarySoft: '#073F49',
-  journal: '#9B7CFF',
-  energy: '#F05ACB',
-  caution: '#FF7A70',
-  warning: '#F4B85E',
-  success: '#64D99A',
+  background: "#FFFFFF",
+  backgroundDeep: "#FFFFFF",
+  surface: "#F5F5FA",
+  surfaceRaised: "#F0F0F6",
+  surfacePressed: "#E2E2EA",
+  text: "#000000",
+  textMuted: "#45454D",
+  textSubtle: "#A4A4AF",
+  border: "#E2E2EA",
+  primary: "#000000",
+  primaryBright: "#000000",
+  primaryPressed: "#222222",
+  primarySoft: "#F2F2F8",
+  journal: "#9B9BA8",
+  energy: "#111111",
+  caution: "#000000",
+  warning: "#A4A4AF",
+  success: "#000000",
+  pastelMint: "#D9FFE1",
+  pastelSky: "#DDF2FF",
+  pastelLilac: "#EEE2FF",
+  pastelPink: "#FFE3F0",
+  pastelLemon: "#FFFFD6",
 };
 
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
+    sans: "system-ui",
     /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
+    serif: "ui-serif",
     /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
+    rounded: "ui-rounded",
     /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+    mono: "ui-monospace",
   },
   default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
+    sans: "normal",
+    serif: "serif",
+    rounded: "normal",
+    mono: "monospace",
   },
   web: {
     sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
+    rounded:
+      "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });

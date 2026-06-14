@@ -5,7 +5,7 @@ import { Platform, StyleSheet } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { Colors, VoiceFixTheme as theme } from '@/constants/theme';
 import { mainAppText } from '@/features/prototype/localization';
 import { usePrototype } from '@/features/prototype/state';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -22,16 +22,16 @@ function PrototypeTabs() {
   if (Platform.OS === 'ios' && state.onboardingComplete) {
     return (
       <NativeTabs
-        backgroundColor="rgba(8, 13, 22, 0.54)"
-        blurEffect="systemChromeMaterialDark"
+        backgroundColor="rgba(255, 255, 255, 0.96)"
+        blurEffect="systemChromeMaterialLight"
         disableTransparentOnScrollEdge
-        iconColor={{ default: '#8190A3', selected: Colors[colorScheme ?? 'light'].tint }}
+        iconColor={{ default: theme.text, selected: Colors[colorScheme ?? 'light'].tint }}
         labelStyle={{
-          default: { color: '#8190A3', fontSize: 11, fontWeight: '600' },
-          selected: { color: Colors[colorScheme ?? 'light'].tint, fontSize: 11, fontWeight: '700' },
+          default: { color: theme.text, fontSize: 11, fontWeight: '800' },
+          selected: { color: Colors[colorScheme ?? 'light'].tint, fontSize: 11, fontWeight: '900' },
         }}
         minimizeBehavior="automatic"
-        shadowColor="rgba(0, 0, 0, 0.32)">
+        shadowColor="rgba(0, 0, 0, 0.08)">
         <NativeTabs.Trigger name="index">
           <Label>{text.tabs.today}</Label>
           <Icon sf={{ default: 'house', selected: 'house.fill' }} />
@@ -62,7 +62,7 @@ function PrototypeTabs() {
         tabBarStyle,
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '600',
+          fontWeight: '900',
         },
         headerShown: false,
         tabBarButton: HapticTab,
@@ -101,8 +101,8 @@ function PrototypeTabs() {
 
 const styles = StyleSheet.create({
   defaultTabBar: {
-    backgroundColor: '#101722',
-    borderTopColor: '#203044',
+    backgroundColor: theme.background,
+    borderTopColor: theme.border,
     height: 84,
     paddingTop: 8,
   },

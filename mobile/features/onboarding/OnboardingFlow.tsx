@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.surfaceRaised,
     borderColor: theme.border,
-    borderRadius: 18,
+    borderRadius: 24,
     borderWidth: 1,
     height: 40,
     justifyContent: 'center',
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   languageMenu: {
     backgroundColor: theme.surface,
     borderColor: theme.border,
-    borderRadius: 12,
+    borderRadius: 28,
     borderWidth: 1,
     minWidth: 150,
     padding: 6,
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   },
   languageMenuItem: {
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 24,
     flexDirection: 'row',
     gap: 9,
     minHeight: 48,
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     backgroundColor: theme.backgroundDeep,
-    borderTopColor: 'rgba(184, 199, 211, 0.1)',
+    borderTopColor: 'rgba(0, 0, 0, 0.08)',
     borderTopWidth: 1,
     bottom: 0,
     gap: 10,

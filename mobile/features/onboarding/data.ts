@@ -23,8 +23,8 @@ export const onboardingScreens: OnboardingScreen[] = [
     kind: 'splash',
     eyebrow: 'VoiceFix',
     title: 'Hear what changed.',
-    body: 'A private voice lab for short checks, one useful cue, and a retry on the same take.',
-    primaryAction: 'Enter the studio',
+    body: 'A calm practice room for short checks, one useful cue, and a retry on the same take.',
+    primaryAction: 'Start practice',
   },
   {
     id: 'ONB-02',
