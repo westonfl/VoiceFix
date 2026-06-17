@@ -21,7 +21,10 @@ import {
   type PlacementResult,
 } from "./curriculum";
 import { normalizeMainLanguage, type MainAppLanguage } from "./localization";
-import { syncTrainingReminder } from "@/features/settings/trainingReminders";
+import {
+  cancelTrainingReminder,
+  syncTrainingReminder,
+} from "@/features/settings/trainingReminders";
 
 export type SavedClip = {
   id: string;
@@ -315,7 +318,14 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
   }, [isHydrated, state]);
 
   useEffect(() => {
-    if (!isHydrated || !state.onboardingComplete) {
+    if (!isHydrated) {
+      return;
+    }
+
+    if (!state.onboardingComplete) {
+      cancelTrainingReminder().catch(() => {
+        // Clearing reminders should not block the app.
+      });
       return;
     }
 
@@ -363,6 +373,7 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
               ? "Choose later"
               : "7:30 PM",
       sessionLength: DAILY_SESSION_LENGTH,
+      notificationsEnabled: answers.notificationPermissionStatus === "granted",
     }));
   }
 
@@ -396,6 +407,9 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
 
   function resetPrototype() {
     setState(initialState);
+    cancelTrainingReminder().catch(() => {
+      // Reset still works in memory if reminder cancellation fails.
+    });
     AsyncStorage.removeItem(STORAGE_KEY).catch(() => {
       // Reset still works in memory if storage deletion fails.
     });

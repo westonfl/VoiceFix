@@ -61,3 +61,28 @@ class MonthOneAnalysisResponse(BaseModel):
     feedback: Feedback
     comparison: Comparison | None = None
     safetyFlags: list[str]
+
+
+ChatRole = Literal["user", "assistant"]
+
+
+class ChatMessage(BaseModel):
+    role: ChatRole
+    content: str = Field(min_length=1, max_length=2400)
+
+
+class ChatContext(BaseModel):
+    currentWeekNumber: int | None = Field(default=None, ge=1, le=12)
+    currentDayNumber: int | None = Field(default=None, ge=1, le=7)
+    currentExerciseTitle: str | None = Field(default=None, max_length=120)
+
+
+class ChatRequest(BaseModel):
+    language: str = Field(default="en", min_length=2, max_length=16)
+    messages: list[ChatMessage] = Field(min_length=1, max_length=16)
+    context: ChatContext | None = None
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    model: str

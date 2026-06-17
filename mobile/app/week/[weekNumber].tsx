@@ -5,7 +5,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { VoiceFixTheme as theme } from "@/constants/theme";
-import { getPhaseLabel, getWeek } from "@/features/prototype/curriculum";
+import {
+  getExerciseById,
+  getPhaseLabel,
+  getWeek,
+} from "@/features/prototype/curriculum";
 import {
   displayPhase,
   displaySessionText,
@@ -27,6 +31,20 @@ export default function WeekPlanScreen() {
   );
   const weekDisplay = displayWeek(week, state.language);
   const phaseLabel = displayPhase(getPhaseLabel(week.phase), state.language);
+  const dailyPracticeExercises = week.dailySessions.flatMap((session) => {
+    const exercise = session.exerciseId
+      ? getExerciseById(session.exerciseId)
+      : undefined;
+
+    return exercise ? [exercise] : [];
+  });
+  const practiceExercises = Array.from(
+    new Map(
+      dailyPracticeExercises.map((exercise) => [exercise.id, exercise]),
+    ).values(),
+  );
+  const displayedPracticeExercises =
+    practiceExercises.length > 0 ? practiceExercises : week.exercises;
   const labels = {
     weekMeta: `${text.common.week} ${week.weekNumber} · ${phaseLabel}`,
     successCheck: text.journey.successCheck,
@@ -34,7 +52,6 @@ export default function WeekPlanScreen() {
     focus: text.journey.focus,
     how: text.journey.how,
     schedule: text.journey.schedule,
-    scheduleBody: text.journey.scheduleBody,
     today: `${text.common.day} ${state.currentDayNumber}`,
     safety: text.journey.safetyRules,
   };
@@ -91,7 +108,7 @@ export default function WeekPlanScreen() {
             <View style={styles.panelCard}>
               <Text style={styles.panelTitle}>{labels.practice}</Text>
               <View style={styles.exerciseList}>
-                {week.exercises.map((exercise, index) => (
+                {displayedPracticeExercises.map((exercise, index) => (
                   <View key={exercise.id} style={styles.exerciseCard}>
                     <View style={styles.exerciseTopRow}>
                       <View style={styles.exerciseNumber}>
@@ -121,29 +138,44 @@ export default function WeekPlanScreen() {
 
             <View style={styles.panelCard}>
               <Text style={styles.panelTitle}>{labels.schedule}</Text>
-              <Text style={styles.panelBody}>{labels.scheduleBody}</Text>
               {isCurrentWeek ? (
                 <Text style={styles.todayLabel}>
                   {fillTemplate(text.journey.currentDay, { day: labels.today })}
                 </Text>
               ) : null}
-              <View style={styles.dayChipRow}>
-                {Array.from({ length: 7 }, (_, index) => {
-                  const day = index + 1;
+              <View style={styles.sessionList}>
+                {week.dailySessions.map((session) => {
                   const isToday =
-                    isCurrentWeek && day === state.currentDayNumber;
+                    isCurrentWeek && session.day === state.currentDayNumber;
                   return (
                     <View
-                      key={day}
-                      style={[styles.dayChip, isToday && styles.dayChipActive]}
+                      key={`${week.weekNumber}-${session.day}`}
+                      style={[
+                        styles.sessionCard,
+                        isToday && styles.sessionCardActive,
+                      ]}
                     >
-                      <Text
-                        style={[
-                          styles.dayChipText,
-                          isToday && styles.dayChipTextActive,
-                        ]}
-                      >
-                        {text.common.day} {day}
+                      <View style={styles.sessionTopRow}>
+                        <Text
+                          style={[
+                            styles.sessionDay,
+                            isToday && styles.sessionDayActive,
+                          ]}
+                        >
+                          {text.common.day} {session.day}
+                        </Text>
+                        <Text style={styles.sessionRole}>
+                          {displaySessionText(session.role, state.language)}
+                        </Text>
+                      </View>
+                      <Text style={styles.sessionTitle}>
+                        {displaySessionText(session.drill, state.language)}
+                      </Text>
+                      <Text style={styles.sessionFocus}>
+                        {displaySessionText(
+                          session.goal ?? session.focus,
+                          state.language,
+                        )}
                       </Text>
                     </View>
                   );
@@ -350,30 +382,51 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
   },
-  dayChipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
+  sessionList: {
+    gap: 10,
   },
-  dayChip: {
+  sessionCard: {
     backgroundColor: theme.surfaceRaised,
     borderColor: theme.border,
-    borderRadius: 24,
+    borderRadius: 16,
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    gap: 6,
+    padding: 12,
   },
-  dayChipActive: {
+  sessionCardActive: {
     borderColor: theme.primaryBright,
   },
-  dayChipText: {
+  sessionTopRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  sessionDay: {
     color: theme.textSubtle,
     fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
   },
-  dayChipTextActive: {
+  sessionDayActive: {
     color: theme.primaryBright,
+  },
+  sessionRole: {
+    color: theme.textSubtle,
+    flex: 1,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  sessionTitle: {
+    color: theme.text,
+    fontSize: 15,
+    fontWeight: "900",
+    lineHeight: 20,
+  },
+  sessionFocus: {
+    color: theme.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
   },
   safetyPanel: {
     alignItems: "flex-start",

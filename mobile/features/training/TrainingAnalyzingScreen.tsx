@@ -1,24 +1,52 @@
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { VoiceFixTheme as theme } from '@/constants/theme';
 import { SignalWave } from '@/features/onboarding/components';
 import type { mainAppText } from '@/features/prototype/localization';
+
+import { LoadingDots } from './LoadingDots';
 
 type TrainingAnalyzingScreenProps = {
   text: (typeof mainAppText)['en']['today'];
 };
 
 export function TrainingAnalyzingScreen({ text }: TrainingAnalyzingScreenProps) {
+  const titlePulse = useSharedValue(0);
+
+  useEffect(() => {
+    titlePulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+  }, [titlePulse]);
+
+  const titleStyle = useAnimatedStyle(() => ({
+    opacity: 0.72 + titlePulse.value * 0.28,
+  }));
+
+  const bodyStyle = useAnimatedStyle(() => ({
+    opacity: 0.55 + titlePulse.value * 0.25,
+  }));
+
   return (
     <View style={styles.screen} accessibilityRole="progressbar">
       <SignalWave active />
-      <Text style={styles.title}>{text.analyzing}</Text>
-      <Text style={styles.body}>{text.analyzingBody}</Text>
-      <View style={styles.dots}>
-        <View style={styles.dot} />
-        <View style={styles.dot} />
-        <View style={styles.dot} />
-      </View>
+      <Animated.Text style={[styles.title, titleStyle]}>{text.analyzing}</Animated.Text>
+      <Animated.Text style={[styles.body, bodyStyle]}>{text.analyzingBody}</Animated.Text>
+      <LoadingDots />
     </View>
   );
 }
@@ -43,17 +71,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     textAlign: 'center',
-  },
-  dots: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  dot: {
-    backgroundColor: theme.textSubtle,
-    borderRadius: 999,
-    height: 8,
-    opacity: 0.35,
-    width: 8,
   },
 });

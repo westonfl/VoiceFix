@@ -14,6 +14,7 @@ export const initialAnswers: OnboardingAnswers = {
   practiceEnvironment: ['phone-mic'],
   strainStatus: 'none',
   micPermissionStatus: 'not-requested',
+  notificationPermissionStatus: 'not-requested',
 };
 
 export const onboardingScreens: OnboardingScreen[] = [
@@ -31,10 +32,10 @@ export const onboardingScreens: OnboardingScreen[] = [
     shortTitle: 'Promise',
     kind: 'info',
     eyebrow: '90-day commitment',
-    title: 'Singing is built through small returns.',
-    body: 'VoiceFix is a 90-day training journey. You will not prove your talent in one session; you will show up, record honestly, fix one small thing, and return tomorrow.',
+    title: 'Your voice changes because you return.',
+    body: 'VoiceFix is a 90-day training journey. Stamina matters here: show up, record honestly, fix one small thing, and come back tomorrow. That effort is the practice.',
     primaryAction: 'Start the 3-month journey',
-    bullets: ['A fixed 12-week path', 'One monthly grace day', 'One retry every session'],
+    bullets: ['A fixed 12-week path', 'Stamina over intensity', 'One monthly grace day', 'One retry every session'],
   },
   {
     id: 'ONB-03',
@@ -194,7 +195,7 @@ export const onboardingScreens: OnboardingScreen[] = [
     kind: 'single',
     eyebrow: 'Routine fit',
     title: 'How much practice should the plan expect?',
-    body: 'A plan you repeat beats a plan that sounds impressive once.',
+    body: 'Stamina beats intensity. Choose the amount you can repeat on a normal day.',
     primaryAction: 'Continue',
     dataKey: 'practiceLength',
     options: [
@@ -249,9 +250,10 @@ export const onboardingScreens: OnboardingScreen[] = [
     id: 'ONB-16',
     shortTitle: 'Mic',
     kind: 'permission',
+    permissionType: 'mic',
     eyebrow: 'Microphone',
     title: 'Allow the mic for the voice check.',
-    body: 'This prototype simulates permission so you can review the onboarding flow. The production app will request the OS microphone permission here.',
+    body: 'VoiceFix needs microphone access for the five short voice-check samples. You can skip the check and continue with quiz answers only.',
     primaryAction: 'Allow microphone',
     secondaryAction: 'Continue without voice check',
     dataKey: 'micPermissionStatus',
@@ -272,7 +274,7 @@ export const onboardingScreens: OnboardingScreen[] = [
     kind: 'recording',
     eyebrow: 'Voice check 1 of 5',
     title: 'Steady hiss',
-    primaryAction: 'Save sample',
+    primaryAction: 'Record',
     recording: {
       index: 1,
       title: 'Steady hiss',
@@ -287,7 +289,7 @@ export const onboardingScreens: OnboardingScreen[] = [
     kind: 'recording',
     eyebrow: 'Voice check 2 of 5',
     title: 'Gentle hum',
-    primaryAction: 'Save sample',
+    primaryAction: 'Record',
     recording: {
       index: 2,
       title: 'Gentle hum',
@@ -302,7 +304,7 @@ export const onboardingScreens: OnboardingScreen[] = [
     kind: 'recording',
     eyebrow: 'Voice check 3 of 5',
     title: 'Sustained ah',
-    primaryAction: 'Save sample',
+    primaryAction: 'Record',
     recording: {
       index: 3,
       title: 'Sustained ah',
@@ -317,7 +319,7 @@ export const onboardingScreens: OnboardingScreen[] = [
     kind: 'recording',
     eyebrow: 'Voice check 4 of 5',
     title: 'Pitch match',
-    primaryAction: 'Save sample',
+    primaryAction: 'Record',
     secondaryAction: 'Play tone',
     recording: {
       index: 4,
@@ -333,7 +335,7 @@ export const onboardingScreens: OnboardingScreen[] = [
     kind: 'recording',
     eyebrow: 'Voice check 5 of 5',
     title: 'Three-note echo',
-    primaryAction: 'Save sample',
+    primaryAction: 'Record',
     secondaryAction: 'Play pattern',
     recording: {
       index: 5,
@@ -385,7 +387,7 @@ export const onboardingScreens: OnboardingScreen[] = [
     kind: 'single',
     eyebrow: 'Daily return',
     title: 'When should VoiceFix call you back?',
-    body: 'A daily voice habit works best when the app asks for the same small promise at the same time.',
+    body: 'A daily voice habit works best when effort has a home on your calendar: the same small promise, at the same time.',
     primaryAction: 'Set training time',
     dataKey: 'reminderTime',
     options: [
@@ -397,6 +399,18 @@ export const onboardingScreens: OnboardingScreen[] = [
   },
   {
     id: 'ONB-28',
+    shortTitle: 'Reminders',
+    kind: 'permission',
+    permissionType: 'notifications',
+    eyebrow: 'Daily reminders',
+    title: 'Allow reminders for your training time.',
+    body: 'VoiceFix can send one daily nudge at the time you picked so practice stays on your calendar.',
+    primaryAction: 'Allow notifications',
+    secondaryAction: 'Continue without reminders',
+    dataKey: 'notificationPermissionStatus',
+  },
+  {
+    id: 'ONB-29',
     shortTitle: 'Ready',
     kind: 'ready',
     eyebrow: 'Ready',

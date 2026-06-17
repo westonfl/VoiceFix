@@ -1,5 +1,15 @@
 import { MaterialIcons } from "@expo/vector-icons";
+import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 
 import { VoiceFixTheme as theme } from "@/constants/theme";
 
@@ -28,24 +38,70 @@ export function StudioMark({ large = false }: { large?: boolean }) {
   );
 }
 
+function WaveBar({
+  baseHeight,
+  index,
+  active,
+}: {
+  baseHeight: number;
+  index: number;
+  active: boolean;
+}) {
+  const progress = useSharedValue(0);
+  const accent = index === 9 || index === 14;
+
+  useEffect(() => {
+    if (!active) {
+      progress.value = 0;
+      return;
+    }
+
+    progress.value = withDelay(
+      index * 55,
+      withRepeat(
+        withSequence(
+          withTiming(1, {
+            duration: 360 + (index % 5) * 40,
+            easing: Easing.inOut(Easing.sin),
+          }),
+          withTiming(0, {
+            duration: 360 + (index % 5) * 40,
+            easing: Easing.inOut(Easing.sin),
+          }),
+        ),
+        -1,
+        false,
+      ),
+    );
+  }, [active, index, progress]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    height: active
+      ? Math.max(18, baseHeight * (0.48 + progress.value * 0.52))
+      : Math.max(16, baseHeight * 0.62),
+    opacity: active
+      ? 0.42 + progress.value * (accent ? 0.54 : 0.38)
+      : 0.36,
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.waveBar,
+        {
+          backgroundColor: accent ? theme.energy : theme.primaryBright,
+        },
+        animatedStyle,
+      ]}
+    />
+  );
+}
+
 export function SignalWave({ active = false }: { active?: boolean }) {
   return (
     <View style={styles.wave}>
       {waveform.map((height, index) => (
-        <View
-          key={`${height}-${index}`}
-          style={[
-            styles.waveBar,
-            {
-              height: active ? height : Math.max(16, height * 0.62),
-              backgroundColor:
-                index === 9 || index === 14
-                  ? theme.energy
-                  : theme.primaryBright,
-              opacity: active ? (index % 3 === 0 ? 0.96 : 0.66) : 0.36,
-            },
-          ]}
-        />
+        <WaveBar key={`${height}-${index}`} active={active} baseHeight={height} index={index} />
       ))}
     </View>
   );

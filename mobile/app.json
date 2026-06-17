@@ -13,6 +13,7 @@
       "bundleIdentifier": "com.ov92.VoiceFix",
       "appleTeamId": "X79VZ448P2",
       "infoPlist": {
+        "NSMicrophoneUsageDescription": "Allow VoiceFix to record short practice takes for private feedback and retry comparison.",
         "NSUserNotificationsUsageDescription": "VoiceFix sends a daily reminder at your chosen training time."
       }
     },
@@ -26,6 +27,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ]

@@ -1,11 +1,22 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { VoiceFixTheme as theme } from '@/constants/theme';
+import { formatDuration } from '@/features/prototype/analysis';
 
 import { InfoList, OptionCard, Pill, ScreenHeader, SignalWave, StudioMark } from './components';
-import { answerLabel, uiText } from './localization';
+import { answerLabel, getUiCopy, uiText } from './localization';
 import type { Language, OnboardingAnswers, OnboardingScreen, StarterPlan } from './types';
+import type { VoiceCheckResult } from './voiceCheck';
+
+type RecordingState = {
+  isRecording: boolean;
+  isAnalyzing: boolean;
+  durationMs?: number;
+  result?: VoiceCheckResult;
+  permissionDenied: boolean;
+  voiceCheckSkipped: boolean;
+};
 
 type ScreenProps = {
   screen: OnboardingScreen;
@@ -13,11 +24,15 @@ type ScreenProps = {
   language: Language;
   plan: StarterPlan;
   recordingComplete: boolean;
+  recordingState?: RecordingState;
+  referencePlaybackLabel?: string;
+  isPlayingReference?: boolean;
   onAdvance: () => void;
   onSecondary: () => void;
   onSelect: (key: keyof OnboardingAnswers, value: string) => void;
   onToggle: (key: keyof OnboardingAnswers, value: string) => void;
   onCompleteRecording: () => void;
+  onPlayReference?: () => void;
 };
 
 export function RenderOnboardingScreen(props: ScreenProps) {
@@ -127,56 +142,138 @@ function ChoiceScreen({ screen, answers, onSelect, onToggle }: ScreenProps) {
 }
 
 function PermissionScreen({ screen, language }: ScreenProps) {
-  const text = uiText[language];
+  const text = getUiCopy(language);
+  const isNotificationPermission = screen.permissionType === 'notifications';
 
   return (
     <View style={styles.stack}>
       <ScreenHeader eyebrow={screen.eyebrow} title={screen.title} body={screen.body} />
       <View style={styles.permissionPanel}>
-        <MaterialIcons name="mic" size={34} color={theme.primaryBright} />
+        <MaterialIcons
+          name={isNotificationPermission ? 'notifications' : 'mic'}
+          size={34}
+          color={theme.primaryBright}
+        />
         <View style={styles.permissionCopy}>
-          <Text style={styles.panelTitle}>{text.micAccessTitle}</Text>
-          <Text style={styles.panelText}>{text.micAccessBody}</Text>
+          <Text style={styles.panelTitle}>
+            {isNotificationPermission ? text.notificationAccessTitle : text.micAccessTitle}
+          </Text>
+          <Text style={styles.panelText}>
+            {isNotificationPermission ? text.notificationAccessBody : text.micAccessBody}
+          </Text>
         </View>
       </View>
     </View>
   );
 }
 
-function RecordingScreen({ screen, language, recordingComplete }: ScreenProps) {
+function RecordingScreen({
+  screen,
+  language,
+  recordingComplete,
+  recordingState,
+  referencePlaybackLabel,
+  isPlayingReference = false,
+  onPlayReference,
+}: ScreenProps) {
   const recording = screen.recording;
-  const text = uiText[language];
+  const text = getUiCopy(language);
 
   if (!recording) {
     return null;
   }
+
+  const isRecording = recordingState?.isRecording ?? false;
+  const isAnalyzing = recordingState?.isAnalyzing ?? false;
+  const durationMs = recordingState?.durationMs;
+  const result = recordingState?.result;
+  const voiceCheckSkipped = recordingState?.voiceCheckSkipped ?? false;
+  const permissionDenied = recordingState?.permissionDenied ?? false;
+  const showSavedState = recordingComplete && result?.saved;
+  const showErrorState = Boolean(result && !result.saved);
+  const canPlayReference =
+    Boolean(referencePlaybackLabel && onPlayReference) &&
+    !voiceCheckSkipped &&
+    !permissionDenied &&
+    !isRecording &&
+    !isAnalyzing;
 
   return (
     <View style={styles.stack}>
       <ScreenHeader eyebrow={screen.eyebrow} title={recording.title} body={recording.instruction} />
       <View style={styles.recordingPanel}>
         <View style={styles.recordingTop}>
-          <View style={styles.recordIcon}>
+          <View style={[styles.recordIcon, isRecording && styles.recordIconActive]}>
             <MaterialIcons name={recording.icon} size={28} color={theme.backgroundDeep} />
           </View>
-          <View>
+          <View style={styles.recordingCopy}>
             <Text style={styles.recordMeta}>
               {text.sample} {recording.index} {text.of} 5
             </Text>
             <Text style={styles.recordTitle}>{recording.title}</Text>
+            {durationMs !== undefined ? (
+              <Text style={styles.recordDuration}>
+                {text.recordingDuration} {formatDuration(durationMs)}
+              </Text>
+            ) : null}
           </View>
         </View>
-        <SignalWave active />
+        {referencePlaybackLabel ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canPlayReference, busy: isPlayingReference }}
+            disabled={!canPlayReference}
+            onPress={onPlayReference}
+            style={({ pressed }) => [
+              styles.referenceButton,
+              isPlayingReference && styles.referenceButtonActive,
+              !canPlayReference && styles.referenceButtonDisabled,
+              pressed && canPlayReference && styles.referenceButtonPressed,
+            ]}>
+            <MaterialIcons
+              name={isPlayingReference ? 'volume-up' : 'play-arrow'}
+              size={22}
+              color={theme.backgroundDeep}
+            />
+            <View style={styles.referenceCopy}>
+              <Text style={styles.referenceLabel}>
+                {isPlayingReference ? text.referencePlaying : referencePlaybackLabel}
+              </Text>
+              <Text style={styles.referenceHint}>{text.referenceHint}</Text>
+            </View>
+          </Pressable>
+        ) : null}
+        <SignalWave active={isRecording || isAnalyzing || isPlayingReference} />
         <View style={styles.listenList}>
           {recording.listensFor.map((item) => (
-            <Pill key={item} label={item} tone={recordingComplete ? 'green' : 'signal'} />
+            <Pill
+              key={item}
+              label={item}
+              tone={showSavedState ? 'green' : isRecording || isAnalyzing ? 'signal' : 'signal'}
+            />
           ))}
         </View>
       </View>
-      {screen.secondaryAction && !recordingComplete ? (
-        <Text style={styles.secondaryHint}>
-          {screen.secondaryAction} {text.actionUnavailable}
-        </Text>
+      {voiceCheckSkipped ? (
+        <Text style={styles.recordingStatus}>{text.voiceCheckSkippedBody}</Text>
+      ) : null}
+      {permissionDenied && !voiceCheckSkipped ? (
+        <Text style={styles.recordingStatus}>{text.micDeniedBody}</Text>
+      ) : null}
+      {isAnalyzing ? (
+        <Text style={styles.recordingStatus}>{text.analyzingBody}</Text>
+      ) : null}
+      {showSavedState && result?.message ? (
+        <View style={styles.feedbackPanel}>
+          <Text style={styles.feedbackTitle}>{text.sampleSaved}</Text>
+          <Text style={styles.feedbackBody}>{result.message}</Text>
+        </View>
+      ) : null}
+      {showErrorState && result?.message ? (
+        <View style={[styles.feedbackPanel, styles.feedbackPanelError]}>
+          <Text style={styles.feedbackTitle}>{text.tryAgain}</Text>
+          <Text style={styles.feedbackBody}>{result.message}</Text>
+        </View>
       ) : null}
     </View>
   );
@@ -381,6 +478,10 @@ const styles = StyleSheet.create({
     gap: 13,
     marginBottom: 10,
   },
+  recordingCopy: {
+    flex: 1,
+    gap: 2,
+  },
   recordIcon: {
     alignItems: 'center',
     backgroundColor: theme.primaryBright,
@@ -388,6 +489,9 @@ const styles = StyleSheet.create({
     height: 48,
     justifyContent: 'center',
     width: 48,
+  },
+  recordIconActive: {
+    backgroundColor: theme.energy,
   },
   recordMeta: {
     color: theme.textSubtle,
@@ -399,16 +503,75 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
   },
+  recordDuration: {
+    color: theme.textSubtle,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  referenceButton: {
+    alignItems: 'center',
+    backgroundColor: theme.primaryBright,
+    borderRadius: 18,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  referenceButtonActive: {
+    backgroundColor: theme.energy,
+  },
+  referenceButtonDisabled: {
+    opacity: 0.45,
+  },
+  referenceButtonPressed: {
+    opacity: 0.88,
+  },
+  referenceCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  referenceLabel: {
+    color: theme.backgroundDeep,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  referenceHint: {
+    color: 'rgba(15, 23, 42, 0.72)',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   listenList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  secondaryHint: {
-    color: theme.textSubtle,
-    fontSize: 13,
-    lineHeight: 18,
+  recordingStatus: {
+    color: theme.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
+  },
+  feedbackPanel: {
+    backgroundColor: theme.surface,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 6,
+    padding: 14,
+  },
+  feedbackPanelError: {
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+  },
+  feedbackTitle: {
+    color: theme.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  feedbackBody: {
+    color: theme.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
   },
   analysisPanel: {
     gap: 14,

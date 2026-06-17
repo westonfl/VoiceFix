@@ -17,7 +17,8 @@ const baseMainAppText = {
     tabs: {
       today: "Today",
       journey: "Journey",
-      journal: "Journal",
+      coach: "Coach",
+      journal: "Milestones",
       settings: "Settings",
     },
     common: {
@@ -62,7 +63,7 @@ const baseMainAppText = {
       startRetry: "Start retry",
       stopRetry: "Stop retry",
       dayComplete: "Day complete.",
-      savedFallback: "The app saved this comparison to Journal.",
+      savedFallback: "The app saved this progress to Milestones.",
       recordedTakes: "Recorded takes",
       backToToday: "Back to Today",
       todaysSession: "Today’s session",
@@ -168,13 +169,13 @@ const baseMainAppText = {
         "This month is ready to unlock the next month.",
     },
     journal: {
-      kicker: "Journal",
-      title: "Proof against your last take.",
-      body: "VoiceFix saves local take comparisons, not a pile of raw recordings. Each entry keeps the first take, retry, and one written observation.",
-      emptyTitle: "No saved comparisons yet.",
+      kicker: "Milestones",
+      title: "Achievements from steady practice.",
+      body: "VoiceFix turns completed exercises, daily goals, streaks, and checkpoints into local progress badges.",
+      emptyTitle: "No achievements earned yet.",
       emptyBody:
-        "Complete today’s training loop to save the first take, retry result, and one written observation.",
-      latestComparison: "Latest comparison",
+        "Complete today’s training loop to start unlocking exercise, goal, and streak badges.",
+      latestComparison: "Latest badge",
       firstTake: "First take",
       retry: "Retry",
       first: "First",
@@ -226,14 +227,15 @@ const baseMainAppText = {
         "Server unavailable, so VoiceFix used the local fallback.",
       retryAnalysisTitle: "Retry analysis result",
       firstAnalysisTitle: "First take analysis result",
-      reset: "Reset prototype",
+      deleteAccount: "Delete account",
     },
   },
   ko: {
     tabs: {
       today: "오늘",
       journey: "여정",
-      journal: "저널",
+      coach: "코치",
+      journal: "마일스톤",
       settings: "설정",
     },
     common: {
@@ -278,7 +280,7 @@ const baseMainAppText = {
       startRetry: "재시도 시작",
       stopRetry: "재시도 정지",
       dayComplete: "오늘 훈련 완료.",
-      savedFallback: "비교 결과가 저널에 저장되었습니다.",
+      savedFallback: "진행 상황이 마일스톤에 저장되었습니다.",
       recordedTakes: "녹음한 테이크",
       backToToday: "오늘로 돌아가기",
       todaysSession: "오늘의 세션",
@@ -382,13 +384,13 @@ const baseMainAppText = {
       readyToUnlockNextMonth: "다음 달을 열 수 있는 상태입니다.",
     },
     journal: {
-      kicker: "저널",
-      title: "이전 테이크와 비교한 증거.",
-      body: "VoiceFix는 무작정 녹음을 쌓지 않고, 첫 테이크와 재시도, 한 줄 관찰을 함께 저장합니다.",
-      emptyTitle: "저장된 비교가 아직 없습니다.",
+      kicker: "마일스톤",
+      title: "꾸준한 연습으로 얻는 성취.",
+      body: "VoiceFix는 완료한 연습, 일일 목표, 연속 기록, 체크포인트를 로컬 배지로 보여줍니다.",
+      emptyTitle: "아직 획득한 성취가 없습니다.",
       emptyBody:
-        "오늘 훈련 루프를 완료하면 첫 테이크, 재시도 결과, 한 줄 관찰이 저장됩니다.",
-      latestComparison: "최근 비교",
+        "오늘 훈련 루프를 완료하면 연습, 목표, 연속 기록 배지를 열기 시작합니다.",
+      latestComparison: "최근 배지",
       firstTake: "첫 테이크",
       retry: "재시도",
       first: "첫 테이크",
@@ -440,7 +442,7 @@ const baseMainAppText = {
         "서버에 연결할 수 없어 기기 내 기본 피드백을 사용했습니다.",
       retryAnalysisTitle: "재시도 분석 결과",
       firstAnalysisTitle: "첫 테이크 분석 결과",
-      reset: "프로토타입 초기화",
+      deleteAccount: "계정 삭제",
     },
   },
 } as const;
@@ -591,7 +593,7 @@ const mainTextTranslations: Record<
       "El servidor no está disponible, así que VoiceFix usó la alternativa local.",
     "Retry analysis result": "Resultado del análisis del reintento",
     "First take analysis result": "Resultado del análisis de la primera toma",
-    "Reset prototype": "Restablecer prototipo",
+    "Delete account": "Eliminar cuenta",
     Analyzing: "Analizando",
     "Reviewing your take…": "Revisando tu toma…",
     "Analysis unavailable": "Análisis no disponible",
@@ -877,7 +879,7 @@ const compactMainPacks: Record<
       "Servidor indisponível, então VoiceFix usou o fallback local.",
       "Resultado da repetição",
       "Resultado da primeira tomada",
-      "Redefinir protótipo",
+      "Excluir conta",
       "Permissões",
       "Notificações",
       "Microfone",
@@ -1000,7 +1002,7 @@ const compactMainPacks: Record<
       "Serveur indisponible, VoiceFix utilise le fallback local.",
       "Résultat de reprise",
       "Résultat de première prise",
-      "Réinitialiser le prototype",
+      "Supprimer le compte",
       "Autorisations",
       "Notifications",
       "Microphone",
@@ -1123,7 +1125,7 @@ const compactMainPacks: Record<
       "Server nicht verfügbar, VoiceFix nutzt lokalen Fallback.",
       "Retry-Analyseergebnis",
       "Analyseergebnis erster Take",
-      "Prototyp zurücksetzen",
+      "Konto löschen",
       "Berechtigungen",
       "Benachrichtigungen",
       "Mikrofon",
@@ -1246,7 +1248,7 @@ const compactMainPacks: Record<
       "サーバーが使えないためローカルの代替フィードバックを使用しました。",
       "リトライ分析結果",
       "最初のテイク分析結果",
-      "プロトタイプをリセット",
+      "アカウントを削除",
       "権限",
       "通知",
       "マイク",
@@ -1369,7 +1371,7 @@ const compactMainPacks: Record<
       "服务器不可用，因此 VoiceFix 使用本机备用反馈。",
       "重试分析结果",
       "第一条分析结果",
-      "重置原型",
+      "删除账户",
       "权限",
       "通知",
       "麦克风",
@@ -1492,7 +1494,7 @@ const compactMainPacks: Record<
       "伺服器不可用，因此 VoiceFix 使用本機備用回饋。",
       "重試分析結果",
       "第一條分析結果",
-      "重置原型",
+      "刪除帳戶",
       "權限",
       "通知",
       "麥克風",
@@ -1615,7 +1617,7 @@ const compactMainPacks: Record<
       "सर्वर उपलब्ध नहीं, इसलिए VoiceFix ने स्थानीय fallback उपयोग किया.",
       "दोबारा विश्लेषण परिणाम",
       "पहली टेक विश्लेषण परिणाम",
-      "प्रोटोटाइप रीसेट करें",
+      "खाता हटाएँ",
       "अनुमतियाँ",
       "सूचनाएँ",
       "माइक्रोफ़ोन",
@@ -1738,7 +1740,7 @@ const compactMainPacks: Record<
       "الخادم غير متاح، لذلك استخدم VoiceFix الملاحظات المحلية.",
       "نتيجة تحليل الإعادة",
       "نتيجة تحليل التسجيل الأول",
-      "إعادة ضبط النموذج",
+      "حذف الحساب",
       "الأذونات",
       "الإشعارات",
       "الميكروفون",
@@ -1861,7 +1863,7 @@ const compactMainPacks: Record<
       "Server tidak tersedia, jadi VoiceFix memakai fallback lokal.",
       "Hasil analisis ulang",
       "Hasil analisis take pertama",
-      "Reset prototipe",
+      "Hapus akun",
       "Izin",
       "Notifikasi",
       "Mikrofon",
@@ -1877,7 +1879,8 @@ function buildCompactMainText(pack: CompactMainPack): MainAppText {
     tabs: {
       today: pack.tabs[0],
       journey: pack.tabs[1],
-      journal: pack.tabs[2],
+      coach: "Coach",
+      journal: "Milestones",
       settings: pack.tabs[3],
     },
     common: {
@@ -1920,7 +1923,7 @@ function buildCompactMainText(pack: CompactMainPack): MainAppText {
       startRetry: pack.today[21],
       stopRetry: pack.today[22],
       dayComplete: pack.today[23],
-      savedFallback: pack.today[24],
+      savedFallback: "The app saved this progress to Milestones.",
       recordedTakes: pack.today[25],
       backToToday: pack.today[26],
       todaysSession: pack.today[27],
@@ -1946,12 +1949,13 @@ function buildCompactMainText(pack: CompactMainPack): MainAppText {
       note: pack.journey[8],
     },
     journal: {
-      kicker: pack.journal[0],
-      title: pack.journal[1],
-      body: pack.journal[2],
-      emptyTitle: pack.journal[3],
-      emptyBody: pack.journal[4],
-      latestComparison: pack.journal[5],
+      kicker: "Milestones",
+      title: "Achievements from steady practice.",
+      body: "VoiceFix turns completed exercises, daily goals, streaks, and checkpoints into local progress badges.",
+      emptyTitle: "No achievements earned yet.",
+      emptyBody:
+        "Complete today’s training loop to start unlocking exercise, goal, and streak badges.",
+      latestComparison: "Latest badge",
       firstTake: pack.journal[6],
       retry: pack.journal[7],
       first: pack.journal[8],
@@ -1998,7 +2002,7 @@ function buildCompactMainText(pack: CompactMainPack): MainAppText {
       localFallbackUsed: pack.settings[24],
       retryAnalysisTitle: pack.settings[25],
       firstAnalysisTitle: pack.settings[26],
-      reset: pack.settings[27],
+      deleteAccount: pack.settings[27],
     },
   } as Partial<MainAppText>);
 }
@@ -2525,6 +2529,49 @@ export function displaySessionText(value: string, language: MainAppLanguage) {
         "1주차 소리와 오늘의 소리를 비교합니다",
       "Decide whether to continue, repeat, or advance":
         "계속할지, 반복할지, 다음으로 갈지 정합니다",
+      "Use less air than yesterday and keep the hiss narrow, small, and easy.":
+        "어제보다 숨을 덜 쓰고 hiss를 좁고 작고 편하게 유지합니다.",
+      "Start smaller so the ending can stay alive without adding pressure.":
+        "끝까지 살아 있게 하려고 처음을 더 작게 시작합니다.",
+      "Take a quiet inhale, then let the hiss begin without a big reset.":
+        "조용히 들이마신 뒤 크게 다시 세팅하지 않고 hiss를 시작합니다.",
+      "Release only enough air to stay even for the full count.":
+        "전체 카운트 동안 고르게 유지될 만큼만 숨을 내보냅니다.",
+      "Record the same soft hiss and notice whether it feels easier or steadier.":
+        "같은 부드러운 hiss를 녹음하고 더 쉽거나 안정적인지 느껴봅니다.",
+      "Make your easiest hiss and decide whether this week feels ready to build on.":
+        "가장 쉬운 hiss를 내고 이번 주 감각을 이어가도 될지 정합니다.",
+      "Stay on one comfortable pitch and let the hum remain boringly even.":
+        "편한 한 음에 머물며 허밍을 지루할 만큼 고르게 유지합니다.",
+      "Use a tiny hum and stop the moment the throat wants to help.":
+        "아주 작은 허밍을 쓰고 목이 도우려는 순간 멈춥니다.",
+      "Keep the hum easy for a few seconds, then release before it tightens.":
+        "몇 초 동안 편하게 유지한 뒤 조여지기 전에 놓습니다.",
+      "Record the same small hum and notice whether the start feels cleaner.":
+        "같은 작은 허밍을 녹음하고 시작이 더 깨끗한지 느껴봅니다.",
+      "Begin one gentle hum and decide whether the start feels easy enough to continue.":
+        "부드러운 허밍 하나를 시작하고 다음으로 이어갈 만큼 편한지 정합니다.",
+      "Keep the mmm quiet and notice the easiest buzz without chasing volume.":
+        "mmm을 조용히 유지하고 음량을 쫓지 않은 채 가장 쉬운 울림을 느껴봅니다.",
+      "Make the mmm smaller if the throat starts working for the vibration.":
+        "진동을 만들려고 목이 일하기 시작하면 mmm을 더 작게 합니다.",
+      "Open less than you think and keep the easy hum feeling in the vowel.":
+        "생각보다 덜 열고 모음 안에서도 편한 허밍 느낌을 유지합니다.",
+      "Choose the sound that felt easiest this week and record that version again.":
+        "이번 주 가장 편했던 소리를 골라 그 버전을 다시 녹음합니다.",
+      "Record a small resonant sound and decide whether it feels less throat-heavy.":
+        "작은 공명 소리를 녹음하고 목에 덜 걸리는지 정합니다.",
+      "Let the ah arrive from the hum instead of starting it with extra pressure.":
+        "추가 압력으로 ah를 시작하지 말고 허밍에서 ah가 나오게 합니다.",
+      "Short gentle tone": "짧은 부드러운 음",
+      "Make the tone shorter and finish while it still feels easy.":
+        "음을 더 짧게 만들고 아직 편할 때 끝냅니다.",
+      "Use one easy pitch: mm, then ah, without changing the calm airflow.":
+        "편한 한 음에서 차분한 숨을 바꾸지 않고 mm, 그다음 ah로 이어갑니다.",
+      "Record a short easy tone and listen for steadier breath, cleaner start, and easier release.":
+        "짧고 쉬운 음을 녹음하고 숨의 안정, 깨끗한 시작, 편한 끝맺음을 들어봅니다.",
+      "Record your easiest connected hum-to-ah and decide whether the next month feels appropriate.":
+        "가장 편한 hum-to-ah 연결을 녹음하고 다음 달로 넘어갈지 정합니다.",
       "Soft hiss baseline": "부드러운 hiss 기준 녹음",
       "Smaller soft hiss": "더 작은 부드러운 hiss",
       "Even-ending hiss": "끝이 고른 hiss",

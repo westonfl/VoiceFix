@@ -229,8 +229,8 @@ export default function SettingsScreen() {
             pressed && styles.resetPressed,
           ]}
         >
-          <Text style={styles.resetText}>{text.settings.reset}</Text>
-          <MaterialIcons name="restart-alt" size={20} color={theme.caution} />
+          <Text style={styles.resetText}>{text.settings.deleteAccount}</Text>
+          <MaterialIcons name="delete-outline" size={20} color={theme.caution} />
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -267,8 +267,8 @@ function PermissionsSection({
 
   async function handleNotificationsToggle(enabled: boolean) {
     if (enabled) {
-      const status = await requestNotificationPermission();
-      if (status !== "granted") {
+      const response = await requestNotificationPermission();
+      if (!response.granted) {
         setNotificationsEnabled(false);
         return;
       }
@@ -282,8 +282,8 @@ function PermissionsSection({
 
   async function handleMicToggle(enabled: boolean) {
     if (enabled) {
-      const status = await requestMicPermission();
-      setMicEnabled(status === "granted");
+      const response = await requestMicPermission();
+      setMicEnabled(response.granted);
       return;
     }
 

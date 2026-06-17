@@ -26,6 +26,7 @@ import {
 } from "@/features/onboarding/components";
 import { formatDuration } from "@/features/prototype/analysis";
 import { analysisMetricItems } from "@/features/prototype/analysisMetrics";
+import { AnalysisMetricCard } from "@/features/training/AnalysisMetricCard";
 import {
   type MainAppLanguage,
 } from "@/features/prototype/localization";
@@ -560,11 +561,7 @@ function TestCheckCard({
       {result?.analysis ? (
         <View style={styles.metricRow}>
           {analysisMetricItems(result.analysis, language).map((metric) => (
-            <SmallMetric
-              key={metric.label}
-              label={metric.label}
-              value={metric.value}
-            />
+            <AnalysisMetricCard key={metric.label} compact item={metric} />
           ))}
         </View>
       ) : null}
@@ -611,15 +608,6 @@ function TestCheckCard({
           />
         ) : null}
       </Pressable>
-    </View>
-  );
-}
-
-function SmallMetric({ value, label }: { value: string; label: string }) {
-  return (
-    <View style={styles.smallMetric}>
-      <Text style={styles.smallMetricValue}>{value}</Text>
-      <Text style={styles.smallMetricLabel}>{label}</Text>
     </View>
   );
 }
@@ -840,27 +828,6 @@ const styles = StyleSheet.create({
   metricRow: {
     flexDirection: "row",
     gap: 8,
-  },
-  smallMetric: {
-    backgroundColor: theme.surface,
-    borderColor: theme.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    flex: 1,
-    gap: 3,
-    minHeight: 58,
-    padding: 9,
-  },
-  smallMetricValue: {
-    color: theme.text,
-    fontSize: 17,
-    fontWeight: "900",
-  },
-  smallMetricLabel: {
-    color: theme.textSubtle,
-    fontSize: 10,
-    fontWeight: "900",
-    textTransform: "uppercase",
   },
   resultMessage: {
     color: theme.text,

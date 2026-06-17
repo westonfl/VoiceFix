@@ -4,6 +4,7 @@ import numpy as np
 from fastapi.testclient import TestClient
 from scipy.io import wavfile
 
+from app import chat as chat_module
 from app.audio import SAMPLE_RATE
 from app.main import app
 
@@ -23,6 +24,86 @@ def test_health():
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_chat_rejects_empty_messages():
+    response = client.post(
+        "/api/chat",
+        json={"language": "en", "messages": []},
+    )
+
+    assert response.status_code == 422
+
+
+def test_chat_requires_nvidia_api_key(monkeypatch):
+    monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
+
+    response = client.post(
+        "/api/chat",
+        json={
+            "language": "en",
+            "messages": [{"role": "user", "content": "How do I keep a hiss steady?"}],
+        },
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Coach service unavailable. Try again later."
+
+
+def test_chat_returns_mocked_nvidia_reply(monkeypatch):
+    seen: dict[str, object] = {}
+
+    async def fake_completion(payload: dict[str, object], api_key: str) -> dict[str, object]:
+        seen["payload"] = payload
+        seen["api_key"] = api_key
+        return {"choices": [{"message": {"content": "Try a smaller hiss and stop before squeezing."}}]}
+
+    monkeypatch.setenv("NVIDIA_API_KEY", "test-key")
+    monkeypatch.setattr(chat_module, "request_nvidia_completion", fake_completion)
+
+    response = client.post(
+        "/api/chat",
+        json={
+            "language": "en",
+            "messages": [{"role": "user", "content": "How do I keep a hiss steady?"}],
+            "context": {
+                "currentWeekNumber": 1,
+                "currentDayNumber": 1,
+                "currentExerciseTitle": "Soft hiss baseline",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "reply": "Try a smaller hiss and stop before squeezing.",
+        "model": "google/gemma-4-31b-it",
+    }
+    assert seen["api_key"] == "test-key"
+    payload = seen["payload"]
+    assert isinstance(payload, dict)
+    assert payload["model"] == "google/gemma-4-31b-it"
+    assert payload["stream"] is False
+    assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+
+
+def test_chat_upstream_error_returns_503(monkeypatch):
+    async def fake_completion(payload: dict[str, object], api_key: str) -> dict[str, object]:
+        raise chat_module.ChatServiceUnavailable("upstream failed")
+
+    monkeypatch.setenv("NVIDIA_API_KEY", "test-key")
+    monkeypatch.setattr(chat_module, "request_nvidia_completion", fake_completion)
+
+    response = client.post(
+        "/api/chat",
+        json={
+            "language": "en",
+            "messages": [{"role": "user", "content": "Can you help?"}],
+        },
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Coach service unavailable. Try again later."
 
 
 def test_month_one_analyze_accepts_wav():

@@ -22,7 +22,7 @@ function PrototypeTabs() {
   if (Platform.OS === 'ios' && state.onboardingComplete) {
     return (
       <NativeTabs
-        backgroundColor="rgba(255, 255, 255, 0.96)"
+        backgroundColor="rgba(255, 248, 245, 0.96)"
         blurEffect="systemChromeMaterialLight"
         disableTransparentOnScrollEdge
         iconColor={{ default: theme.text, selected: Colors[colorScheme ?? 'light'].tint }}
@@ -40,9 +40,13 @@ function PrototypeTabs() {
           <Label>{text.tabs.journey}</Label>
           <Icon sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }} />
         </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="coach">
+          <Label>{text.tabs.coach}</Label>
+          <Icon sf={{ default: 'bubble.left.and.bubble.right', selected: 'bubble.left.and.bubble.right.fill' }} />
+        </NativeTabs.Trigger>
         <NativeTabs.Trigger name="journal">
           <Label>{text.tabs.journal}</Label>
-          <Icon sf={{ default: 'book', selected: 'book.fill' }} />
+          <Icon sf={{ default: 'trophy', selected: 'trophy.fill' }} />
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="settings">
           <Label>{text.tabs.settings}</Label>
@@ -82,10 +86,17 @@ function PrototypeTabs() {
         }}
       />
       <Tabs.Screen
+        name="coach"
+        options={{
+          title: text.tabs.coach,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="bubble.left.and.bubble.right.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="journal"
         options={{
           title: text.tabs.journal,
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="book.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="trophy.fill" color={color} />,
         }}
       />
       <Tabs.Screen

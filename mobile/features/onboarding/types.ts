@@ -46,10 +46,13 @@ export type RecordingCheck = {
   icon: IconName;
 };
 
+export type OnboardingPermissionType = 'mic' | 'notifications';
+
 export type OnboardingScreen = {
   id: string;
   shortTitle: string;
   kind: OnboardingScreenKind;
+  permissionType?: OnboardingPermissionType;
   eyebrow: string;
   title: string;
   body?: string;
@@ -77,6 +80,7 @@ export type OnboardingAnswers = {
   practiceEnvironment: string[];
   strainStatus: string;
   micPermissionStatus: string;
+  notificationPermissionStatus: string;
 };
 
 export type StarterPlan = {

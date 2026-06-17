@@ -26,7 +26,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
-import { headerIconButtonStyles } from "@/constants/headerButtons";
+import { CloseIconButton, headerIconButtonStyles } from "@/constants/headerButtons";
 import { VoiceFixTheme as theme } from "@/constants/theme";
 import { OnboardingFlow } from "@/features/onboarding/OnboardingFlow";
 import {
@@ -34,9 +34,11 @@ import {
   SignalWave,
   type CardGradientVariant,
 } from "@/features/onboarding/components";
-import { analysisMetricItems } from "@/features/prototype/analysisMetrics";
+import { analysisMetricItems, metricGuideTitle } from "@/features/prototype/analysisMetrics";
+import { AnalysisMetricCard } from "@/features/training/AnalysisMetricCard";
 import {
   curriculum,
+  getExerciseById,
   getWeek,
   type CurriculumExercise,
 } from "@/features/prototype/curriculum";
@@ -53,6 +55,7 @@ import {
 import { usePrototype } from "@/features/prototype/state";
 import type { LiveMeterSample } from "@/features/training/liveAnalysis";
 import { TrainingAnalyzingScreen } from "@/features/training/TrainingAnalyzingScreen";
+import { LoadingDots } from "@/features/training/LoadingDots";
 import { TrainingDetailScreen } from "@/features/training/TrainingDetailScreen";
 import { TrainingLiveSession } from "@/features/training/TrainingLiveSession";
 import { TrainingResultsScreen } from "@/features/training/TrainingResultsScreen";
@@ -123,10 +126,13 @@ export default function TodayScreen() {
   const [selectedWeekNumber, setSelectedWeekNumber] = useState(
     state.currentWeekNumber,
   );
+  const [selectedDayNumber, setSelectedDayNumber] = useState(
+    state.currentDayNumber,
+  );
   const goalFade = useRef(new Animated.Value(0)).current;
   const displayedWeek = getWeek(selectedWeekNumber);
   const todaySession =
-    displayedWeek.dailySessions[state.currentDayNumber - 1] ??
+    displayedWeek.dailySessions[selectedDayNumber - 1] ??
     displayedWeek.dailySessions[0];
   const text = mainAppText[state.language];
   const forYouTitle = text.today.forYouTitle;
@@ -141,15 +147,41 @@ export default function TodayScreen() {
   const orderedExerciseUnits = orderedExerciseIds
     .map((id) => displayedWeek.exercises.find((exercise) => exercise.id === id))
     .filter((exercise): exercise is CurriculumExercise => Boolean(exercise));
-  const todayExerciseCards: TodayExerciseCard[] = orderedExerciseUnits.map(
+  const todaySessionExercise = todaySession.exerciseId
+    ? getExerciseById(todaySession.exerciseId)
+    : undefined;
+  const dailyExerciseUnits = todaySessionExercise
+    ? [todaySessionExercise]
+    : orderedExerciseUnits;
+  const todayExerciseCards: TodayExerciseCard[] = dailyExerciseUnits.map(
     (exercise) => ({
       id: exercise.id,
-      title: displaySessionText(exercise.title, state.language),
-      detail: displaySessionText(exercise.instruction, state.language),
-      goal: displaySessionText(exercise.goal, state.language),
-      instruction: displaySessionText(exercise.instruction, state.language),
+      title: displaySessionText(
+        todaySessionExercise ? todaySession.drill : exercise.title,
+        state.language,
+      ),
+      detail: displaySessionText(
+        todaySessionExercise
+          ? (todaySession.goal ?? todaySession.focus)
+          : exercise.instruction,
+        state.language,
+      ),
+      goal: displaySessionText(
+        todaySessionExercise
+          ? (todaySession.goal ?? exercise.goal)
+          : exercise.goal,
+        state.language,
+      ),
+      instruction: displaySessionText(
+        todaySessionExercise
+          ? (todaySession.instruction ?? exercise.instruction)
+          : exercise.instruction,
+        state.language,
+      ),
       category: exercise.category,
-      analysisDrillId: exercise.analysisDrillId,
+      analysisDrillId: todaySessionExercise
+        ? (todaySession.analysisDrillId ?? exercise.analysisDrillId)
+        : exercise.analysisDrillId,
       visual: exercise.visual,
       icon: getExerciseIcon(exercise),
       gradient: getExerciseGradient(exercise.category),
@@ -171,7 +203,7 @@ export default function TodayScreen() {
   const savedTodayClip = state.savedClips.find(
     (clip) =>
       clip.weekNumber === displayedWeek.weekNumber &&
-      clip.dayNumber === state.currentDayNumber,
+      clip.dayNumber === selectedDayNumber,
   );
   const currentRecordedMs = firstTake?.durationMs ?? 0;
   const recordedPracticeMs =
@@ -220,6 +252,20 @@ export default function TodayScreen() {
     setSelectedWeekNumber(state.currentWeekNumber);
   }, [state.currentWeekNumber]);
 
+  useEffect(() => {
+    setSelectedDayNumber(state.currentDayNumber);
+  }, [state.currentDayNumber]);
+
+  useEffect(() => {
+    setActiveExerciseIndex(0);
+    setCompletedExerciseIds([]);
+    setCompletedRecordedMs(0);
+    setFirstTake(null);
+    setFirstAnalysis(null);
+    setRetryAnalysis(null);
+    setAnalysisSource(null);
+  }, [selectedWeekNumber, selectedDayNumber]);
+
   if (!isHydrated) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -239,7 +285,7 @@ export default function TodayScreen() {
     setGoalModalVisible(true);
     goalFade.setValue(0);
     Animated.timing(goalFade, {
-      duration: 180,
+      duration: 260,
       toValue: 1,
       useNativeDriver: true,
     }).start();
@@ -247,7 +293,7 @@ export default function TodayScreen() {
 
   function closeGoalModal() {
     Animated.timing(goalFade, {
-      duration: 140,
+      duration: 200,
       toValue: 0,
       useNativeDriver: true,
     }).start(({ finished }) => {
@@ -429,13 +475,18 @@ export default function TodayScreen() {
           </View>
 
           <ForYouStack
-            dayLabel={`${text.common.day} ${state.currentDayNumber}`}
+            dayLabel={`${text.common.day} ${selectedDayNumber}`}
+            selectedDayNumber={selectedDayNumber}
             selectedWeekNumber={selectedWeekNumber}
             weeks={selectableWeeks}
             exercises={todayExerciseCards}
             text={text}
             onSelectWeek={(weekNumber) => {
               setSelectedWeekNumber(weekNumber);
+              setActiveExerciseIndex(0);
+            }}
+            onSelectDay={(dayNumber) => {
+              setSelectedDayNumber(dayNumber);
               setActiveExerciseIndex(0);
             }}
             onMoveExercise={(fromIndex, toIndex) =>
@@ -548,18 +599,10 @@ function TrainingSessionModalContent({
   const stepContent = (
     <>
       {sessionStep === "live" ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close"
+        <CloseIconButton
           onPress={onClose}
-          style={({ pressed }) => [
-            headerIconButtonStyles.button,
-            headerIconButtonStyles.buttonAlignStart,
-            pressed && headerIconButtonStyles.buttonPressed,
-          ]}
-        >
-          <MaterialIcons name="close" size={22} color={theme.text} />
-        </Pressable>
+          style={headerIconButtonStyles.buttonAlignStart}
+        />
       ) : null}
 
       {sessionStep === "detail" && currentExercise ? (
@@ -602,6 +645,8 @@ function TrainingSessionModalContent({
           analysis={firstAnalysis}
           fallback={analysisSource === "fallback"}
           text={text}
+          language={language}
+          exerciseTitle={currentExercise?.title}
           onRedo={onRedo}
           onDone={onDone}
         />
@@ -690,20 +735,24 @@ function getExerciseGradient(
 
 function ForYouStack({
   dayLabel,
+  selectedDayNumber,
   selectedWeekNumber,
   weeks,
   exercises,
   text,
   onSelectWeek,
+  onSelectDay,
   onMoveExercise,
   onPressExercise,
 }: {
   dayLabel: string;
+  selectedDayNumber: number;
   selectedWeekNumber: number;
   weeks: typeof curriculum;
   exercises: TodayExerciseCard[];
   text: (typeof mainAppText)["en"];
   onSelectWeek: (weekNumber: number) => void;
+  onSelectDay: (dayNumber: number) => void;
   onMoveExercise: (fromIndex: number, toIndex: number) => void;
   onPressExercise: () => void;
 }) {
@@ -746,6 +795,39 @@ function ForYouStack({
                 {fillTemplate(text.today.weekChip, {
                   number: week.weekNumber,
                 })}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.daySelector}
+      >
+        {Array.from({ length: 7 }, (_, index) => {
+          const dayNumber = index + 1;
+          const selected = dayNumber === selectedDayNumber;
+
+          return (
+            <Pressable
+              key={dayNumber}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              onPress={() => onSelectDay(dayNumber)}
+              style={({ pressed }) => [
+                styles.dayChip,
+                selected && styles.dayChipActive,
+                pressed && styles.dayChipPressed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.dayChipText,
+                  selected && styles.dayChipTextActive,
+                ]}
+              >
+                {text.common.day} {dayNumber}
               </Text>
             </Pressable>
           );
@@ -970,6 +1052,7 @@ function TaskCardContent({
   muted?: boolean;
 }) {
   const illustration = getExerciseIllustration(exercise.id);
+  const isSustainedHiss = exercise.id === "sustained-hiss";
 
   return (
     <View style={styles.taskCardInner}>
@@ -989,7 +1072,12 @@ function TaskCardContent({
         </Text>
       </View>
       {illustration ? (
-        <View style={styles.exerciseIllustrationFrame}>
+        <View
+          style={[
+            styles.exerciseIllustrationFrame,
+            isSustainedHiss ? styles.sustainedHissIllustrationFrame : null,
+          ]}
+        >
           <Image
             accessibilityLabel={fillTemplate(
               text.today.exerciseIllustrationA11y,
@@ -997,10 +1085,13 @@ function TaskCardContent({
                 title: exercise.title,
               },
             )}
-            contentFit="cover"
-            contentPosition="top"
+            contentFit={isSustainedHiss ? "contain" : "cover"}
+            contentPosition={isSustainedHiss ? "center" : "top"}
             source={illustration}
-            style={styles.exerciseIllustration}
+            style={[
+              styles.exerciseIllustration,
+              isSustainedHiss ? styles.sustainedHissIllustration : null,
+            ]}
           />
         </View>
       ) : (
@@ -1020,14 +1111,12 @@ function DailyGoalCard({
   activeMs,
   activeTargetMs,
   language,
-  onClose,
 }: {
   completed: number;
   total: number;
   activeMs: number;
   activeTargetMs: number;
   language: MainAppLanguage;
-  onClose: () => void;
 }) {
   const timeProgress = Math.min(1, activeMs / activeTargetMs);
   const labels = mainAppText[language];
@@ -1041,20 +1130,7 @@ function DailyGoalCard({
 
   return (
     <View style={styles.dailyGoalCard}>
-      <View style={styles.goalHeader}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={labels.today.closeLabel}
-          onPress={onClose}
-          style={({ pressed }) => [
-            headerIconButtonStyles.button,
-            pressed && headerIconButtonStyles.buttonPressed,
-          ]}
-        >
-          <MaterialIcons name="close" size={22} color={theme.text} />
-        </Pressable>
-        <Text style={styles.goalModalTitle}>{title}</Text>
-      </View>
+      <Text style={styles.goalModalTitle}>{title}</Text>
 
       <View style={styles.goalMeterRow}>
         <View style={styles.goalMeter}>
@@ -1105,49 +1181,41 @@ function DailyGoalModal({
   fade: Animated.Value;
   onClose: () => void;
 }) {
+  const labels = mainAppText[language];
   const sheetY = fade.interpolate({
     inputRange: [0, 1],
-    outputRange: [18, 0],
+    outputRange: [320, 0],
   });
 
   return (
     <Modal
-      animationType="none"
+      animationType="fade"
       transparent
       visible={visible}
       onRequestClose={onClose}
     >
-      <Animated.View style={[styles.modalFadeLayer, { opacity: fade }]}>
-        <Pressable
-          accessibilityRole="button"
-          style={styles.modalBackdrop}
-          onPress={onClose}
-        >
-          <Pressable style={styles.goalModalContent}>
-            <Animated.View
-              style={[
-                styles.goalModalSheet,
-                { transform: [{ translateY: sheetY }] },
-              ]}
-            >
-              <ScrollView
-                style={styles.goalModalScroll}
-                contentContainerStyle={styles.goalModalScrollContent}
-                showsVerticalScrollIndicator={false}
-              >
-                <DailyGoalCard
-                  completed={completed}
-                  total={total}
-                  activeMs={activeMs}
-                  activeTargetMs={activeTargetMs}
-                  language={language}
-                  onClose={onClose}
-                />
-              </ScrollView>
-            </Animated.View>
+      <Pressable style={styles.goalSheetBackdrop} onPress={onClose}>
+        <Animated.View
+          style={[styles.goalSheetFadeLayer, { opacity: fade }]}
+          pointerEvents="none"
+        />
+        <Animated.View style={{ transform: [{ translateY: sheetY }] }}>
+          <Pressable style={styles.goalModalSheet}>
+            <CloseIconButton
+              accessibilityLabel={labels.today.closeLabel}
+              onPress={onClose}
+              style={headerIconButtonStyles.sheetCloseButton}
+            />
+            <DailyGoalCard
+              completed={completed}
+              total={total}
+              activeMs={activeMs}
+              activeTargetMs={activeTargetMs}
+              language={language}
+            />
           </Pressable>
-        </Pressable>
-      </Animated.View>
+        </Animated.View>
+      </Pressable>
     </Modal>
   );
 }
@@ -1233,11 +1301,7 @@ function AnalysisLoadingState({
         {text.today.analyzingTake}
       </Text>
       <Text style={styles.analysisLoadingBody}>{message}</Text>
-      <View style={styles.analysisLoadingDots}>
-        <View style={styles.analysisLoadingDot} />
-        <View style={styles.analysisLoadingDot} />
-        <View style={styles.analysisLoadingDot} />
-      </View>
+      <LoadingDots />
     </View>
   );
 }
@@ -1273,10 +1337,13 @@ function AnalysisPanel({
         </View>
       </View>
 
-      <View style={styles.analysisMetrics}>
-        {metricItems.map((item) => (
-          <Metric key={item.label} value={item.value} label={item.label} />
-        ))}
+      <View style={styles.metricGuide}>
+        <Text style={styles.metricGuideTitle}>{metricGuideTitle(language)}</Text>
+        <View style={styles.analysisMetrics}>
+          {metricItems.map((item) => (
+            <AnalysisMetricCard key={item.label} item={item} />
+          ))}
+        </View>
       </View>
 
       <AnalysisLine
@@ -1313,15 +1380,6 @@ function AnalysisLine({ label, detail }: { label: string; detail: string }) {
     <View style={styles.analysisLine}>
       <Text style={styles.feedbackLabel}>{label}</Text>
       <Text style={styles.feedbackDetail}>{detail}</Text>
-    </View>
-  );
-}
-
-function Metric({ value, label }: { value: string; label: string }) {
-  return (
-    <View style={styles.metric}>
-      <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
     </View>
   );
 }
@@ -1483,6 +1541,36 @@ const styles = StyleSheet.create({
   weekChipTextActive: {
     color: theme.primaryBright,
   },
+  daySelector: {
+    gap: SPACE,
+    paddingHorizontal: SPACE,
+    paddingBottom: SPACE,
+  },
+  dayChip: {
+    backgroundColor: theme.surfaceRaised,
+    borderColor: theme.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    minHeight: 34,
+    justifyContent: "center",
+    paddingHorizontal: SPACE * 2,
+  },
+  dayChipActive: {
+    backgroundColor: theme.text,
+    borderColor: theme.text,
+  },
+  dayChipPressed: {
+    backgroundColor: theme.surfacePressed,
+  },
+  dayChipText: {
+    color: theme.textSubtle,
+    fontSize: 10,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  dayChipTextActive: {
+    color: theme.background,
+  },
   exerciseDeck: {
     marginTop: SPACE,
     position: "relative",
@@ -1624,13 +1712,23 @@ const styles = StyleSheet.create({
     minHeight: 172,
     overflow: "hidden",
   },
+  sustainedHissIllustrationFrame: {
+    backgroundColor: "rgba(255, 253, 248, 0.82)",
+    borderColor: "rgba(23, 17, 15, 0.08)",
+    borderWidth: 1,
+    padding: 10,
+  },
   exerciseIllustration: {
     height: "100%",
     width: "100%",
   },
+  sustainedHissIllustration: {
+    borderRadius: 16,
+    transform: [{ scale: 1.28 }],
+  },
   pickExerciseIcon: {
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.64)",
+    backgroundColor: "rgba(255, 248, 245, 0.68)",
     borderRadius: 14,
     height: 32,
     justifyContent: "center",
@@ -1654,17 +1752,11 @@ const styles = StyleSheet.create({
   },
   dailyGoalCard: {
     alignItems: "center",
-    backgroundColor: theme.background,
     gap: SPACE * 4,
-    minHeight: 250,
+    paddingBottom: SPACE * 2,
     paddingHorizontal: SPACE * 5,
-    paddingVertical: SPACE * 5,
-  },
-  goalHeader: {
-    alignItems: "center",
-    alignSelf: "stretch",
-    flexDirection: "row",
-    gap: 12,
+    paddingTop: SPACE * 2,
+    width: "100%",
   },
   goalMeterRow: {
     alignItems: "flex-start",
@@ -1722,45 +1814,30 @@ const styles = StyleSheet.create({
     textAlign: "center",
     textTransform: "uppercase",
   },
-  modalFadeLayer: {
+  goalSheetBackdrop: {
     flex: 1,
+    justifyContent: "flex-end",
   },
-  modalBackdrop: {
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.22)",
-    flex: 1,
-    justifyContent: "center",
-    padding: 22,
-  },
-  goalModalContent: {
-    maxHeight: "92%",
-    maxWidth: 340,
-    width: "100%",
+  goalSheetFadeLayer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.16)",
   },
   goalModalSheet: {
+    alignItems: "center",
     backgroundColor: theme.background,
-    borderRadius: 28,
+    borderTopLeftRadius: 34,
+    borderTopRightRadius: 34,
     gap: SPACE * 1.5,
-    maxHeight: "100%",
-    overflow: "hidden",
-    shadowColor: "#000000",
-    shadowOffset: { height: 16, width: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 22,
+    paddingBottom: 42,
+    paddingTop: 78,
     width: "100%",
   },
   goalModalTitle: {
     color: theme.text,
-    flex: 1,
-    fontSize: 24,
+    fontSize: 31,
     fontWeight: "900",
-  },
-  goalModalScroll: {
-    flexGrow: 0,
-    width: "100%",
-  },
-  goalModalScrollContent: {
-    paddingBottom: SPACE * 2,
+    lineHeight: 38,
+    textAlign: "center",
   },
   heroPanel: {
     backgroundColor: theme.surfaceRaised,
@@ -1772,25 +1849,6 @@ const styles = StyleSheet.create({
   },
   heroMeta: {
     gap: 4,
-  },
-  metric: {
-    backgroundColor: theme.surfaceRaised,
-    borderRadius: 18,
-    flex: 1,
-    minHeight: 78,
-    padding: 12,
-  },
-  metricValue: {
-    color: theme.text,
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  metricLabel: {
-    color: theme.textSubtle,
-    fontSize: 12,
-    fontWeight: "700",
-    marginTop: 5,
-    textTransform: "uppercase",
   },
   panel: {
     backgroundColor: theme.surfaceRaised,
@@ -1844,8 +1902,8 @@ const styles = StyleSheet.create({
   },
   note: {
     alignItems: "flex-start",
-    backgroundColor: "rgba(245, 245, 250, 1)",
-    borderColor: "rgba(0, 0, 0, 0.1)",
+    backgroundColor: theme.surface,
+    borderColor: theme.border,
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
@@ -1861,7 +1919,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     alignItems: "center",
     backgroundColor: theme.background,
-    borderColor: "rgba(69, 69, 77, 0.38)",
+    borderColor: theme.border,
     borderRadius: 28,
     borderWidth: 2,
     flexDirection: "row",
@@ -1970,8 +2028,17 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   analysisMetrics: {
-    flexDirection: "row",
-    gap: 8,
+    gap: 10,
+  },
+  metricGuide: {
+    gap: 10,
+  },
+  metricGuideTitle: {
+    color: theme.textSubtle,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.1,
+    textTransform: "uppercase",
   },
   analysisLine: {
     borderTopColor: "rgba(0, 0, 0, 0.08)",

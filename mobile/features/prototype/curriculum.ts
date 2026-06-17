@@ -13,6 +13,9 @@ export type DailySession = {
   role: string;
   focus: string;
   drill: string;
+  exerciseId?: string;
+  goal?: string;
+  instruction?: string;
   analysisDrillId?: MonthOneDrillId;
 };
 
@@ -55,6 +58,10 @@ function repeatWeeklySession(
     ...session,
     day: index + 1,
   }));
+}
+
+function monthOneSession(session: DailySession): DailySession {
+  return session;
 }
 
 const weekOneExercises: CurriculumExercise[] = [
@@ -138,8 +145,338 @@ const weekFourExercises: CurriculumExercise[] = [
   },
 ];
 
+const weekOneSessions: DailySession[] = [
+  monthOneSession({
+    day: 1,
+    role: "Baseline",
+    focus: "Record the current version",
+    drill: "Soft hiss baseline",
+    exerciseId: "sustained-hiss",
+    goal: "Record a natural soft hiss",
+    instruction:
+      "Inhale quietly, then make a soft hiss that stays even from start to finish.",
+    analysisDrillId: "sustained_hiss",
+  }),
+  monthOneSession({
+    day: 2,
+    role: "Stabilize",
+    focus: "Repeat the easiest version",
+    drill: "Smaller soft hiss",
+    exerciseId: "sustained-hiss",
+    goal: "Repeat the hiss with less force",
+    instruction:
+      "Use less air than yesterday and keep the hiss narrow, small, and easy.",
+    analysisDrillId: "sustained_hiss",
+  }),
+  monthOneSession({
+    day: 3,
+    role: "Clarify",
+    focus: "Add one technical detail",
+    drill: "Even-ending hiss",
+    exerciseId: "sustained-hiss",
+    goal: "Keep the last third from collapsing",
+    instruction:
+      "Start smaller so the ending can stay alive without adding pressure.",
+    analysisDrillId: "sustained_hiss",
+  }),
+  monthOneSession({
+    day: 4,
+    role: "Small cue",
+    focus: "Add one technical detail",
+    drill: "Quiet inhale to hiss",
+    exerciseId: "sustained-hiss",
+    goal: "Avoid shoulder lift and over-breathing",
+    instruction:
+      "Take a quiet inhale, then let the hiss begin without a big reset.",
+    analysisDrillId: "sustained_hiss",
+  }),
+  monthOneSession({
+    day: 5,
+    role: "Focused take",
+    focus: "Same drill",
+    drill: "Timed soft hiss",
+    exerciseId: "sustained-hiss",
+    goal: "Hold a 10-second steady hiss",
+    instruction:
+      "Release only enough air to stay even for the full count.",
+    analysisDrillId: "sustained_hiss",
+  }),
+  monthOneSession({
+    day: 6,
+    role: "Review",
+    focus: "Repeat and compare",
+    drill: "Hiss comparison take",
+    exerciseId: "sustained-hiss",
+    goal: "Compare the first hiss with the latest hiss",
+    instruction:
+      "Record the same soft hiss and notice whether it feels easier or steadier.",
+    analysisDrillId: "sustained_hiss",
+  }),
+  monthOneSession({
+    day: 7,
+    role: "Checkpoint",
+    focus: "Recover, reflect, or advance",
+    drill: "Breath checkpoint",
+    exerciseId: "sustained-hiss",
+    goal: "Check whether air can leave without pushing",
+    instruction:
+      "Make your easiest hiss and decide whether this week feels ready to build on.",
+    analysisDrillId: "sustained_hiss",
+  }),
+];
+
+const weekTwoSessions: DailySession[] = [
+  monthOneSession({
+    day: 1,
+    role: "Baseline",
+    focus: "Record the current version",
+    drill: "Gentle hum baseline",
+    exerciseId: "gentle-hum",
+    goal: "Record a tiny comfortable hum",
+    instruction:
+      "Hum quietly on one comfortable pitch and stop before it feels pressed.",
+    analysisDrillId: "gentle_hum",
+  }),
+  monthOneSession({
+    day: 2,
+    role: "Easy start",
+    focus: "Add one technical detail",
+    drill: "Soft hum start",
+    exerciseId: "soft-hum-start",
+    goal: "Begin the hum without a hard attack",
+    instruction:
+      "Let the hum appear gently after the breath; avoid grabbing the first moment.",
+    analysisDrillId: "soft_hum_start",
+  }),
+  monthOneSession({
+    day: 3,
+    role: "Steady volume",
+    focus: "Same drill",
+    drill: "Even gentle hum",
+    exerciseId: "gentle-hum",
+    goal: "Keep the hum small and even",
+    instruction:
+      "Stay on one comfortable pitch and let the hum remain boringly even.",
+    analysisDrillId: "gentle_hum",
+  }),
+  monthOneSession({
+    day: 4,
+    role: "Comfort check",
+    focus: "Gentle check",
+    drill: "Comfort hum",
+    exerciseId: "gentle-hum",
+    goal: "Stop before the sound gets pressed",
+    instruction:
+      "Use a tiny hum and stop the moment the throat wants to help.",
+    analysisDrillId: "gentle_hum",
+  }),
+  monthOneSession({
+    day: 5,
+    role: "Short hold",
+    focus: "Same drill",
+    drill: "Short gentle hum",
+    exerciseId: "gentle-hum",
+    goal: "Hold a relaxed hum for 3-5 seconds",
+    instruction:
+      "Keep the hum easy for a few seconds, then release before it tightens.",
+    analysisDrillId: "gentle_hum",
+  }),
+  monthOneSession({
+    day: 6,
+    role: "Review",
+    focus: "Repeat and compare",
+    drill: "Hum comparison take",
+    exerciseId: "gentle-hum",
+    goal: "Compare the first hum with the latest hum",
+    instruction:
+      "Record the same small hum and notice whether the start feels cleaner.",
+    analysisDrillId: "gentle_hum",
+  }),
+  monthOneSession({
+    day: 7,
+    role: "Checkpoint",
+    focus: "Recover, reflect, or advance",
+    drill: "Gentle sound checkpoint",
+    exerciseId: "soft-hum-start",
+    goal: "Check whether sound starts without throat pressure",
+    instruction:
+      "Begin one gentle hum and decide whether the start feels easy enough to continue.",
+    analysisDrillId: "soft_hum_start",
+  }),
+];
+
+const weekThreeSessions: DailySession[] = [
+  monthOneSession({
+    day: 1,
+    role: "Baseline resonance",
+    focus: "Record the current version",
+    drill: "Resonance baseline",
+    exerciseId: "mmm-resonance",
+    goal: "Record a soft mmm or vah sound",
+    instruction:
+      "Use a small mmm and notice whether it feels easier in the lips or face.",
+    analysisDrillId: "mmm_resonance",
+  }),
+  monthOneSession({
+    day: 2,
+    role: "Find vibration",
+    focus: "Add one technical detail",
+    drill: "Mmm resonance",
+    exerciseId: "mmm-resonance",
+    goal: "Notice easy face or lip vibration",
+    instruction:
+      "Keep the mmm quiet and notice the easiest buzz without chasing volume.",
+    analysisDrillId: "mmm_resonance",
+  }),
+  monthOneSession({
+    day: 3,
+    role: "Keep it easy",
+    focus: "Same drill",
+    drill: "Easy mmm resonance",
+    exerciseId: "mmm-resonance",
+    goal: "Avoid pressing for more buzz",
+    instruction:
+      "Make the mmm smaller if the throat starts working for the vibration.",
+    analysisDrillId: "mmm_resonance",
+  }),
+  monthOneSession({
+    day: 4,
+    role: "Open gently",
+    focus: "Application take",
+    drill: "Mmm-ah connection",
+    exerciseId: "hum-to-ah",
+    goal: "Open from mmm to ah without grabbing",
+    instruction:
+      "Open less than you think and keep the easy hum feeling in the vowel.",
+    analysisDrillId: "hum_to_ah",
+  }),
+  monthOneSession({
+    day: 5,
+    role: "Vowel resonance",
+    focus: "Application take",
+    drill: "Fah or vah resonance",
+    exerciseId: "fah-vah-resonance",
+    goal: "Try a gentle fah or vah with the same ease",
+    instruction: "Speak-sing fah or vah softly, keeping it light and unforced.",
+    analysisDrillId: "fah_vah_resonance",
+  }),
+  monthOneSession({
+    day: 6,
+    role: "Repeat best sound",
+    focus: "Best take",
+    drill: "Best resonance take",
+    exerciseId: "mmm-resonance",
+    goal: "Recreate the easiest resonant take",
+    instruction:
+      "Choose the sound that felt easiest this week and record that version again.",
+    analysisDrillId: "mmm_resonance",
+  }),
+  monthOneSession({
+    day: 7,
+    role: "Checkpoint",
+    focus: "Recover, reflect, or advance",
+    drill: "Resonance checkpoint",
+    exerciseId: "mmm-resonance",
+    goal: "Check for an easier, less throat-heavy sound",
+    instruction:
+      "Record a small resonant sound and decide whether it feels less throat-heavy.",
+    analysisDrillId: "mmm_resonance",
+  }),
+];
+
+const weekFourSessions: DailySession[] = [
+  monthOneSession({
+    day: 1,
+    role: "Baseline tone",
+    focus: "Record the current version",
+    drill: "Hum to ah baseline",
+    exerciseId: "hum-to-ah",
+    goal: "Record hum to ah as one connected gesture",
+    instruction:
+      "Start with a gentle hum, then open to ah while keeping the same calm airflow.",
+    analysisDrillId: "hum_to_ah",
+  }),
+  monthOneSession({
+    day: 2,
+    role: "Softer onset",
+    focus: "Add one technical detail",
+    drill: "Soft vowel onset",
+    exerciseId: "hum-to-ah",
+    goal: "Start the vowel gently without pushing",
+    instruction:
+      "Let the ah arrive from the hum instead of starting it with extra pressure.",
+    analysisDrillId: "hum_to_ah",
+  }),
+  monthOneSession({
+    day: 3,
+    role: "Stable middle",
+    focus: "Same drill",
+    drill: "Short gentle tone",
+    exerciseId: "short-tone",
+    goal: "Keep a short tone from wobbling",
+    instruction:
+      "Sing one easy pitch for 3-5 seconds, then release without squeezing.",
+    analysisDrillId: "short_tone_hold",
+  }),
+  monthOneSession({
+    day: 4,
+    role: "Clean ending",
+    focus: "Add one technical detail",
+    drill: "Clean ending tone",
+    exerciseId: "short-tone",
+    goal: "Finish without dropping suddenly",
+    instruction:
+      "Make the tone shorter and finish while it still feels easy.",
+    analysisDrillId: "short_tone_hold",
+  }),
+  monthOneSession({
+    day: 5,
+    role: "Tiny musical move",
+    focus: "Application take",
+    drill: "Mm-ah one pitch",
+    exerciseId: "hum-to-ah",
+    goal: "Keep the same ease on one comfortable pitch",
+    instruction:
+      "Use one easy pitch: mm, then ah, without changing the calm airflow.",
+    analysisDrillId: "hum_to_ah",
+  }),
+  monthOneSession({
+    day: 6,
+    role: "Month comparison",
+    focus: "Compare first and latest takes",
+    drill: "Month 1 comparison",
+    exerciseId: "short-tone",
+    goal: "Compare the Week 1 sound with today",
+    instruction:
+      "Record a short easy tone and listen for steadier breath, cleaner start, and easier release.",
+    analysisDrillId: "short_tone_hold",
+  }),
+  monthOneSession({
+    day: 7,
+    role: "Month 1 checkpoint",
+    focus: "Recover, reflect, or advance",
+    drill: "Month 1 checkpoint",
+    exerciseId: "hum-to-ah",
+    goal: "Decide whether to continue, repeat, or advance",
+    instruction:
+      "Record your easiest connected hum-to-ah and decide whether the next month feels appropriate.",
+    analysisDrillId: "hum_to_ah",
+  }),
+];
+
+const monthOneExercises = [
+  ...weekOneExercises,
+  ...weekTwoExercises,
+  ...weekThreeExercises,
+  ...weekFourExercises,
+];
+
 function coreTitles(exercises: CurriculumExercise[]) {
   return exercises.map((exercise) => exercise.title);
+}
+
+export function getExerciseById(exerciseId: string) {
+  return monthOneExercises.find((exercise) => exercise.id === exerciseId);
 }
 
 export const curriculum: CurriculumWeek[] = [
@@ -150,12 +487,7 @@ export const curriculum: CurriculumWeek[] = [
     goal: "Feel steady outgoing air without pushing.",
     exercises: weekOneExercises,
     coreExercises: coreTitles(weekOneExercises),
-    dailySessions: repeatWeeklySession({
-      role: "Breath practice",
-      focus: "Record each breath exercise and compare the retry.",
-      drill: "Sustained Hiss",
-      analysisDrillId: "sustained_hiss",
-    }),
+    dailySessions: weekOneSessions,
     checkpoint: "Can you release air without pushing?",
     tags: ["breath", "airflow", "foundation"],
     difficulty: 1,
@@ -168,12 +500,7 @@ export const curriculum: CurriculumWeek[] = [
     goal: "Introduce sound without throat pressure.",
     exercises: weekTwoExercises,
     coreExercises: coreTitles(weekTwoExercises),
-    dailySessions: repeatWeeklySession({
-      role: "Gentle sound practice",
-      focus: "Record each gentle sound exercise and keep it small.",
-      drill: "Gentle Hum",
-      analysisDrillId: "gentle_hum",
-    }),
+    dailySessions: weekTwoSessions,
     checkpoint: "Can you make a small sound without strain?",
     tags: ["hum", "gentle", "foundation"],
     difficulty: 1,
@@ -186,12 +513,7 @@ export const curriculum: CurriculumWeek[] = [
     goal: "Explore easier vibration and reduce throat-heavy sound.",
     exercises: weekThreeExercises,
     coreExercises: coreTitles(weekThreeExercises),
-    dailySessions: repeatWeeklySession({
-      role: "Resonance practice",
-      focus: "Record each resonance exercise without pressing for buzz.",
-      drill: "Mmm Resonance",
-      analysisDrillId: "mmm_resonance",
-    }),
+    dailySessions: weekThreeSessions,
     checkpoint: "Can you find an easier, less throat-heavy sound?",
     tags: ["resonance", "hum", "foundation"],
     difficulty: 1,
@@ -204,12 +526,7 @@ export const curriculum: CurriculumWeek[] = [
     goal: "Combine steady air, gentle sound, and resonance into short controlled tones.",
     exercises: weekFourExercises,
     coreExercises: coreTitles(weekFourExercises),
-    dailySessions: repeatWeeklySession({
-      role: "Integration practice",
-      focus: "Record each integration exercise and keep the release clean.",
-      drill: "Hum to Ah",
-      analysisDrillId: "hum_to_ah",
-    }),
+    dailySessions: weekFourSessions,
     checkpoint: "Can you hold a short sound comfortably?",
     tags: ["breath", "resonance", "integration"],
     difficulty: 2,

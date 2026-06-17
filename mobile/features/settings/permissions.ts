@@ -3,11 +3,11 @@ import {
   requestRecordingPermissionsAsync,
 } from "expo-audio";
 import * as Notifications from "expo-notifications";
-import type { PermissionStatus } from "expo-modules-core";
+import type { PermissionResponse, PermissionStatus } from "expo-modules-core";
 
 export async function readMicPermissionStatus(): Promise<PermissionStatus> {
-  const { status } = await getRecordingPermissionsAsync();
-  return status;
+  const response = await getRecordingPermissionsAsync();
+  return response.status;
 }
 
 export async function readNotificationPermissionStatus(): Promise<PermissionStatus> {
@@ -15,18 +15,16 @@ export async function readNotificationPermissionStatus(): Promise<PermissionStat
   return status;
 }
 
-export async function requestMicPermission(): Promise<PermissionStatus> {
-  const { status } = await requestRecordingPermissionsAsync();
-  return status;
+export async function requestMicPermission(): Promise<PermissionResponse> {
+  return requestRecordingPermissionsAsync();
 }
 
-export async function requestNotificationPermission(): Promise<PermissionStatus> {
-  const { status } = await Notifications.requestPermissionsAsync({
+export async function requestNotificationPermission(): Promise<PermissionResponse> {
+  return Notifications.requestPermissionsAsync({
     ios: {
       allowAlert: true,
       allowBadge: false,
       allowSound: true,
     },
   });
-  return status;
 }

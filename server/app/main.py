@@ -12,7 +12,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .analyzer import analyze_samples
 from .audio import AudioDecodeError, decode_audio
-from .models import DrillId, Language, MonthOneAnalysisResponse, TakeKind
+from .chat import ChatServiceUnavailable, generate_chat_reply
+from .models import ChatRequest, ChatResponse, DrillId, Language, MonthOneAnalysisResponse, TakeKind
 
 
 logger = logging.getLogger("uvicorn.error")
@@ -76,6 +77,15 @@ def health() -> dict[str, object]:
         "legacyAliases": LEGACY_DRILL_ALIASES,
         "ffmpegAvailable": shutil.which("ffmpeg") is not None,
     }
+
+
+@app.post("/api/chat", response_model=ChatResponse)
+async def coach_chat(request: ChatRequest) -> ChatResponse:
+    try:
+        return await generate_chat_reply(request)
+    except ChatServiceUnavailable as exc:
+        logger.warning("chat_unavailable detail=%s", exc)
+        raise HTTPException(status_code=503, detail="Coach service unavailable. Try again later.") from exc
 
 
 @app.post("/api/month-one/analyze", response_model=MonthOneAnalysisResponse)

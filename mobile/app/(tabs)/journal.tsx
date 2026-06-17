@@ -1,22 +1,80 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useAudioPlayer } from "expo-audio";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-
-import { VoiceFixTheme as theme } from "@/constants/theme";
-import { formatDuration } from "@/features/prototype/analysis";
-import { getWeek } from "@/features/prototype/curriculum";
+import type { ComponentProps } from "react";
+import { useMemo, useState } from "react";
 import {
-  displaySessionText,
-  displayWeek,
-  mainAppText,
-} from "@/features/prototype/localization";
-import { usePrototype } from "@/features/prototype/state";
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, {
+  Defs,
+  LinearGradient as SvgLinearGradient,
+  Path,
+  Stop,
+} from "react-native-svg";
 
-export default function JournalScreen() {
+import { CloseIconButton, headerIconButtonStyles } from "@/constants/headerButtons";
+import { VoiceFixTheme as theme } from "@/constants/theme";
+import { mainAppText } from "@/features/prototype/localization";
+import { isMonthlyTestPassed, usePrototype } from "@/features/prototype/state";
+
+type AchievementKind = "exercise" | "goal" | "streak" | "pitch" | "month";
+
+const ACHIEVEMENT_COLUMNS = 3;
+const ACHIEVEMENT_GRID_GAP = 12;
+const ACHIEVEMENT_PANEL_PADDING = 14;
+const SCREEN_HORIZONTAL_PADDING = 20;
+const BADGE_VIEWBOX_SIZE = 120;
+const BADGE_HEX_VERTICES = [
+  { x: 60, y: 10 },
+  { x: 110, y: 37 },
+  { x: 110, y: 83 },
+  { x: 60, y: 110 },
+  { x: 10, y: 83 },
+  { x: 10, y: 37 },
+] as const;
+const BADGE_HEX_PATH = roundedPolygonPath(BADGE_HEX_VERTICES, 10);
+
+type Achievement = {
+  id: string;
+  title: string;
+  earnedDescription: string;
+  lockedDescription: string;
+  goal: number;
+  progress: number;
+  icon: ComponentProps<typeof MaterialIcons>["name"];
+  kind: AchievementKind;
+};
+
+export default function MilestonesScreen() {
   const { state } = usePrototype();
-  const hasClips = state.savedClips.length > 0;
+  const { width: windowWidth } = useWindowDimensions();
   const text = mainAppText[state.language];
+  const [selectedAchievementId, setSelectedAchievementId] = useState<
+    string | null
+  >(null);
+  const achievements = useMemo(() => buildAchievements(state), [state]);
+  const selectedAchievement =
+    achievements.find((achievement) => achievement.id === selectedAchievementId) ??
+    null;
+  const { achievementTileWidth, achievementBadgeSize } = useMemo(() => {
+    const panelWidth = windowWidth - SCREEN_HORIZONTAL_PADDING * 2;
+    const innerWidth = panelWidth - ACHIEVEMENT_PANEL_PADDING * 2;
+    const tileWidth =
+      (innerWidth - ACHIEVEMENT_GRID_GAP * (ACHIEVEMENT_COLUMNS - 1)) /
+      ACHIEVEMENT_COLUMNS;
+    const badgeSize = Math.min(88, Math.round(tileWidth * 0.88));
+
+    return {
+      achievementTileWidth: tileWidth,
+      achievementBadgeSize: badgeSize,
+    };
+  }, [windowWidth]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -25,409 +83,561 @@ export default function JournalScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.kicker}>{text.journal.kicker}</Text>
-          <Text style={styles.title}>{text.journal.title}</Text>
+          <Text style={styles.title}>{text.tabs.journal}</Text>
           <Text style={styles.body}>{text.journal.body}</Text>
         </View>
 
-        {!hasClips ? (
-          <View style={styles.emptyPanel}>
-            <View style={styles.emptyIcon}>
-              <MaterialIcons
-                name="graphic-eq"
-                size={28}
-                color={theme.primaryBright}
-              />
-            </View>
-            <Text style={styles.emptyTitle}>{text.journal.emptyTitle}</Text>
-            <Text style={styles.body}>{text.journal.emptyBody}</Text>
-          </View>
-        ) : null}
-
-        {hasClips ? (
-          <View style={styles.comparePanel}>
-            <Text style={styles.panelTitle}>
-              {text.journal.latestComparison}
-            </Text>
-            <View style={styles.compareGrid}>
-              <TakeBlock
-                label={text.journal.firstTake}
-                value={formatDuration(state.savedClips[0].firstDurationMs)}
-              />
-              <TakeBlock
-                label={text.journal.retry}
-                value={formatDuration(state.savedClips[0].retryDurationMs)}
-                accent
-              />
-            </View>
-          </View>
-        ) : null}
-
-        <View style={styles.clipList}>
-          {state.savedClips.map((clip) => (
-            <ClipCard key={clip.id} clip={clip} />
-          ))}
+        <View style={styles.summaryStrip}>
+          <SummaryMetric label="Exercises" value={getExerciseProgress(state)} />
+          <SummaryMetric
+            label="Goals"
+            value={getDailyGoalProgress(state)}
+          />
+          <SummaryMetric label="Streak" value={state.streak.current} />
         </View>
 
-        <View style={styles.monthPanel}>
-          <Text style={styles.panelTitle}>
-            {text.journal.monthlyCheckpoints}
-          </Text>
-          {[
-            text.journal.checkpointOne,
-            text.journal.checkpointTwo,
-            text.journal.checkpointThree,
-          ].map((item, index) => (
-            <View key={item} style={styles.checkpointRow}>
-              <Text style={styles.checkpointNumber}>{index + 1}</Text>
-              <Text style={styles.checkpointText}>{item}</Text>
-              <Text style={styles.checkpointState}>
-                {index === 0 && hasClips
-                  ? text.journal.open
-                  : text.journal.later}
-              </Text>
-            </View>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{text.journal.title}</Text>
+        </View>
+
+        <View style={styles.achievementPanel}>
+          {achievements.map((achievement) => (
+            <AchievementTile
+              achievement={achievement}
+              badgeSize={achievementBadgeSize}
+              key={achievement.id}
+              onPress={() => setSelectedAchievementId(achievement.id)}
+              tileWidth={achievementTileWidth}
+            />
           ))}
         </View>
       </ScrollView>
+
+      <AchievementSheet
+        achievement={selectedAchievement}
+        onClose={() => setSelectedAchievementId(null)}
+      />
     </SafeAreaView>
   );
 }
 
-function TakeBlock({
-  label,
-  value,
-  accent = false,
+function buildAchievements(
+  state: ReturnType<typeof usePrototype>["state"],
+): Achievement[] {
+  const exerciseProgress = getExerciseProgress(state);
+  const dailyGoalProgress = getDailyGoalProgress(state);
+  const pitchPerfectProgress = hasPitchPerfectClip(state) ? 1 : 0;
+  const monthProgress = isMonthlyTestPassed(state.monthlyTests, 1) ? 1 : 0;
+
+  return [
+    makeAchievement({
+      id: "exercise-10",
+      title: "10 Exercises",
+      description: "completing 10 exercises",
+      goal: 10,
+      progress: exerciseProgress,
+      icon: "mic",
+      kind: "exercise",
+    }),
+    makeAchievement({
+      id: "exercise-100",
+      title: "100 Exercises",
+      description: "completing 100 exercises",
+      goal: 100,
+      progress: exerciseProgress,
+      icon: "mic",
+      kind: "exercise",
+    }),
+    makeAchievement({
+      id: "exercise-1000",
+      title: "1000 Exercises",
+      description: "completing 1000 exercises",
+      goal: 1000,
+      progress: exerciseProgress,
+      icon: "mic",
+      kind: "exercise",
+    }),
+    makeAchievement({
+      id: "goal-10",
+      title: "10 Daily Goals",
+      description: "finishing 10 daily goals",
+      goal: 10,
+      progress: dailyGoalProgress,
+      icon: "check",
+      kind: "goal",
+    }),
+    makeAchievement({
+      id: "goal-100",
+      title: "100 Daily Goals",
+      description: "finishing 100 daily goals",
+      goal: 100,
+      progress: dailyGoalProgress,
+      icon: "check",
+      kind: "goal",
+    }),
+    makeAchievement({
+      id: "goal-1000",
+      title: "1000 Daily Goals",
+      description: "finishing 1000 daily goals",
+      goal: 1000,
+      progress: dailyGoalProgress,
+      icon: "check",
+      kind: "goal",
+    }),
+    makeAchievement({
+      id: "streak-7",
+      title: "7-Day Streak",
+      description: "practicing for 7 days in a row",
+      goal: 7,
+      progress: state.streak.current,
+      icon: "local-fire-department",
+      kind: "streak",
+    }),
+    makeAchievement({
+      id: "streak-30",
+      title: "30-Day Streak",
+      description: "practicing for 30 days in a row",
+      goal: 30,
+      progress: state.streak.current,
+      icon: "local-fire-department",
+      kind: "streak",
+    }),
+    makeAchievement({
+      id: "streak-365",
+      title: "365-Day Streak",
+      description: "practicing for 365 days in a row",
+      goal: 365,
+      progress: state.streak.current,
+      icon: "local-fire-department",
+      kind: "streak",
+    }),
+    makeAchievement({
+      id: "pitch-perfect",
+      title: "Pitch Perfect",
+      description: "recording a stable pitch check",
+      goal: 1,
+      progress: pitchPerfectProgress,
+      icon: "tune",
+      kind: "pitch",
+    }),
+    makeAchievement({
+      id: "month-one",
+      title: "Month 1 Complete",
+      description: "passing the Month 1 checkpoint",
+      goal: 1,
+      progress: monthProgress,
+      icon: "workspace-premium",
+      kind: "month",
+    }),
+  ];
+}
+
+function makeAchievement({
+  id,
+  title,
+  description,
+  goal,
+  progress,
+  icon,
+  kind,
 }: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
+  id: string;
+  title: string;
+  description: string;
+  goal: number;
+  progress: number;
+  icon: ComponentProps<typeof MaterialIcons>["name"];
+  kind: AchievementKind;
+}): Achievement {
+  const cappedProgress = Math.min(progress, goal);
+
+  return {
+    id,
+    title,
+    earnedDescription: `Earned for ${description}.`,
+    lockedDescription: `${toImperativePhrase(description)} to earn this badge.`,
+    goal,
+    progress: cappedProgress,
+    icon,
+    kind,
+  };
+}
+
+function getExerciseProgress(state: ReturnType<typeof usePrototype>["state"]) {
+  return state.savedClips.reduce((total, clip) => {
+    if (typeof clip.recordedPracticeMs === "number") {
+      return total + Math.max(1, Math.round(clip.recordedPracticeMs / 30000));
+    }
+
+    return total + 1;
+  }, 0);
+}
+
+function getDailyGoalProgress(state: ReturnType<typeof usePrototype>["state"]) {
+  return state.savedClips.filter((clip) => clip.dailyGoalMet).length;
+}
+
+function hasPitchPerfectClip(state: ReturnType<typeof usePrototype>["state"]) {
+  return state.savedClips.some((clip) => {
+    const pitchScore = clip.analysisMetrics?.pitchScore;
+    const pitchAccuracy = clip.analysisMetrics?.pitchAccuracy;
+
+    return (
+      (typeof pitchScore === "number" && pitchScore >= 0.9) ||
+      (typeof pitchAccuracy === "number" && pitchAccuracy >= 90)
+    );
+  });
+}
+
+function SummaryMetric({ label, value }: { label: string; value: number }) {
   return (
-    <View style={[styles.takeBlock, accent && styles.takeBlockAccent]}>
-      <Text style={styles.takeLabel}>{label}</Text>
-      <Text style={styles.takeValue}>{value}</Text>
+    <View style={styles.summaryMetric}>
+      <Text style={styles.summaryValue}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
     </View>
   );
 }
 
-function ClipCard({
-  clip,
-}: {
-  clip: ReturnType<typeof usePrototype>["state"]["savedClips"][number];
-}) {
-  const firstPlayer = useAudioPlayer(clip.firstTakeUri ?? null);
-  const retryPlayer = useAudioPlayer(clip.retryTakeUri ?? null);
-  const { state } = usePrototype();
-  const text = mainAppText[state.language];
-  const clipWeek = getWeek(clip.weekNumber);
-  const clipWeekDisplay = displayWeek(clipWeek, state.language);
-  const clipRole = clip.title.split(" - ")[1];
-  const clipTitle = clipRole
-    ? `${clipWeekDisplay.title} - ${displaySessionText(clipRole, state.language)}`
-    : clipWeekDisplay.title;
-
-  function playFirst() {
-    firstPlayer.seekTo(0);
-    firstPlayer.play();
-  }
-
-  function playRetry() {
-    retryPlayer.seekTo(0);
-    retryPlayer.play();
-  }
-
-  return (
-    <View style={styles.clipCard}>
-      <View style={styles.clipTop}>
-        <View style={styles.clipIcon}>
-          <MaterialIcons name="library-music" size={20} color={theme.journal} />
-        </View>
-        <View style={styles.clipCopy}>
-          <Text style={styles.clipTitle}>{clipTitle}</Text>
-          <Text style={styles.clipMeta}>
-            {text.common.week} {clip.weekNumber} · {text.common.day}{" "}
-            {clip.dayNumber}
-          </Text>
-        </View>
-      </View>
-      <Text style={styles.clipText}>{clip.observation}</Text>
-      <Text style={styles.clipResult}>{clip.comparison}</Text>
-      <View style={styles.playRow}>
-        <PlayButton
-          label={text.journal.first}
-          disabled={!clip.firstTakeUri}
-          onPress={playFirst}
-        />
-        <PlayButton
-          label={text.journal.retry}
-          disabled={!clip.retryTakeUri}
-          onPress={playRetry}
-        />
-      </View>
-      <View style={styles.uriBlock}>
-        <Text style={styles.uriText}>
-          {text.journal.first}:{" "}
-          {clip.firstTakeUri ? text.journal.savedLocally : text.journal.noUri}
-        </Text>
-        <Text style={styles.uriText}>
-          {text.journal.retry}:{" "}
-          {clip.retryTakeUri ? text.journal.savedLocally : text.journal.noUri}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-function PlayButton({
-  label,
-  disabled,
+function AchievementTile({
+  achievement,
+  badgeSize,
   onPress,
+  tileWidth,
 }: {
-  label: string;
-  disabled: boolean;
+  achievement: Achievement;
+  badgeSize: number;
   onPress: () => void;
+  tileWidth: number;
 }) {
+  const earned = achievement.progress >= achievement.goal;
+
   return (
     <Pressable
+      accessibilityLabel={`${achievement.title}, ${earned ? "earned" : "locked"}`}
       accessibilityRole="button"
-      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.playButton,
-        pressed && styles.playButtonPressed,
-        disabled && styles.playButtonDisabled,
+        styles.achievementTile,
+        { width: tileWidth },
+        pressed && styles.achievementTilePressed,
       ]}
     >
-      <MaterialIcons
-        name="play-arrow"
-        size={18}
-        color={disabled ? theme.textSubtle : theme.backgroundDeep}
-      />
-      <Text
-        style={[
-          styles.playButtonText,
-          disabled && styles.playButtonTextDisabled,
-        ]}
-      >
-        {label}
+      <View style={[styles.badgeSlot, { height: badgeSize, width: badgeSize }]}>
+        <BadgeHex achievement={achievement} size={badgeSize} />
+      </View>
+      <Text style={styles.achievementLabel} numberOfLines={2}>
+        {achievement.title}
       </Text>
     </Pressable>
   );
 }
 
+function AchievementSheet({
+  achievement,
+  onClose,
+}: {
+  achievement: Achievement | null;
+  onClose: () => void;
+}) {
+  const earned = achievement
+    ? achievement.progress >= achievement.goal
+    : false;
+  const remaining = achievement
+    ? Math.max(0, achievement.goal - achievement.progress)
+    : 0;
+
+  return (
+    <Modal
+      animationType="fade"
+      transparent
+      visible={Boolean(achievement)}
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.sheetBackdrop} onPress={onClose}>
+        <Pressable style={styles.sheet}>
+          {achievement ? (
+            <>
+              <CloseIconButton
+                accessibilityLabel="Close achievement"
+                onPress={onClose}
+                style={headerIconButtonStyles.sheetCloseButton}
+              />
+
+              <BadgeHex achievement={achievement} size={188} />
+              <Text style={styles.sheetTitle}>{achievement.title}</Text>
+              <View style={styles.sheetMessage}>
+                <Text style={styles.sheetMessageText}>
+                  {earned
+                    ? achievement.earnedDescription
+                    : achievement.lockedDescription}
+                </Text>
+              </View>
+              {!earned && remaining > 0 ? (
+                <Text style={styles.progressText}>
+                  {achievement.progress} of {achievement.goal} complete
+                </Text>
+              ) : null}
+            </>
+          ) : null}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function BadgeHex({
+  achievement,
+  size,
+}: {
+  achievement: Achievement;
+  size: number;
+}) {
+  const earned = achievement.progress >= achievement.goal;
+  const iconSize = Math.round(size * 0.34);
+
+  return (
+    <View style={[styles.badgeWrap, { height: size, width: size }]}>
+      <Svg
+        height={size}
+        width={size}
+        viewBox={`0 0 ${BADGE_VIEWBOX_SIZE} ${BADGE_VIEWBOX_SIZE}`}
+      >
+        <Defs>
+          <SvgLinearGradient
+            id={`badgeGradient-${achievement.id}`}
+            x1="0"
+            y1="0"
+            x2="1"
+            y2="1"
+          >
+            <Stop offset="0" stopColor="#DBFFE4" />
+            <Stop offset="0.32" stopColor="#FFF8D8" />
+            <Stop offset="0.62" stopColor="#DDF4FF" />
+            <Stop offset="1" stopColor="#FFE2F7" />
+          </SvgLinearGradient>
+        </Defs>
+        <Path
+          d={BADGE_HEX_PATH}
+          fill={
+            earned ? `url(#badgeGradient-${achievement.id})` : theme.surface
+          }
+          stroke={earned ? theme.text : "#DFDFE9"}
+          strokeLinejoin="round"
+          strokeWidth={earned ? 7 : 6}
+        />
+      </Svg>
+      <View style={styles.badgeIconLayer}>
+        <MaterialIcons
+          name={achievement.icon}
+          size={iconSize}
+          color={earned ? theme.text : "#DFDFE9"}
+        />
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: theme.backgroundDeep,
+    backgroundColor: theme.background,
     flex: 1,
   },
   content: {
-    gap: 18,
-    padding: 20,
+    gap: 22,
+    paddingHorizontal: 20,
     paddingBottom: 116,
+    paddingTop: 14,
   },
   header: {
-    gap: 9,
-    paddingTop: 12,
-  },
-  kicker: {
-    color: theme.journal,
-    fontSize: 13,
-    fontWeight: "800",
-    textTransform: "uppercase",
+    gap: 8,
   },
   title: {
     color: theme.text,
-    fontSize: 32,
-    fontWeight: "800",
-    lineHeight: 38,
+    fontSize: 40,
+    fontWeight: "900",
+    letterSpacing: 0,
+    lineHeight: 46,
   },
   body: {
     color: theme.textMuted,
     fontSize: 15,
-    lineHeight: 23,
+    fontWeight: "600",
+    lineHeight: 22,
   },
-  emptyPanel: {
-    alignItems: "flex-start",
+  summaryStrip: {
     backgroundColor: theme.surfaceRaised,
-    borderColor: "rgba(86, 108, 123, 0.26)",
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: 10,
-    padding: 18,
-  },
-  emptyIcon: {
-    alignItems: "center",
-    backgroundColor: "rgba(86, 108, 123, 0.12)",
-    borderRadius: 22,
-    height: 50,
-    justifyContent: "center",
-    width: 50,
-  },
-  emptyTitle: {
-    color: theme.text,
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  comparePanel: {
-    backgroundColor: theme.surfaceRaised,
-    borderColor: "rgba(86, 108, 123, 0.26)",
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: 12,
-    padding: 16,
-  },
-  panelTitle: {
-    color: theme.text,
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  compareGrid: {
+    borderRadius: 8,
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
+    padding: 10,
   },
-  takeBlock: {
-    backgroundColor: theme.surface,
-    borderColor: "rgba(0, 0, 0, 0.08)",
-    borderRadius: 24,
-    borderWidth: 1,
+  summaryMetric: {
+    alignItems: "center",
+    backgroundColor: theme.background,
+    borderRadius: 8,
     flex: 1,
-    padding: 14,
+    minHeight: 68,
+    justifyContent: "center",
+    paddingHorizontal: 8,
   },
-  takeBlockAccent: {
-    borderColor: "rgba(0, 0, 0, 0.16)",
+  summaryValue: {
+    color: theme.text,
+    fontSize: 23,
+    fontWeight: "900",
   },
-  takeLabel: {
-    color: theme.textSubtle,
+  summaryLabel: {
+    color: theme.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  sectionHeader: {
+    marginTop: 8,
+  },
+  sectionTitle: {
+    color: theme.text,
+    fontSize: 24,
+    fontWeight: "900",
+  },
+  achievementPanel: {
+    backgroundColor: theme.surfaceRaised,
+    borderRadius: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: ACHIEVEMENT_GRID_GAP,
+    paddingHorizontal: ACHIEVEMENT_PANEL_PADDING,
+    paddingVertical: 20,
+  },
+  achievementTile: {
+    alignItems: "center",
+    gap: 8,
+  },
+  badgeSlot: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  achievementTilePressed: {
+    opacity: 0.68,
+    transform: [{ scale: 0.98 }],
+  },
+  achievementLabel: {
+    color: theme.text,
     fontSize: 12,
-    fontWeight: "800",
-    textTransform: "uppercase",
+    fontWeight: "700",
+    lineHeight: 15,
+    minHeight: 31,
+    textAlign: "center",
   },
-  takeValue: {
-    color: theme.text,
-    fontSize: 18,
-    fontWeight: "800",
-    marginTop: 6,
-  },
-  clipList: {
-    gap: 10,
-  },
-  clipCard: {
-    backgroundColor: theme.surface,
-    borderColor: "rgba(0, 0, 0, 0.08)",
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: 12,
-    padding: 15,
-  },
-  clipTop: {
+  badgeWrap: {
     alignItems: "center",
-    flexDirection: "row",
-    gap: 12,
-  },
-  clipIcon: {
-    alignItems: "center",
-    backgroundColor: "rgba(86, 108, 123, 0.12)",
-    borderRadius: 24,
-    height: 40,
     justifyContent: "center",
-    width: 40,
   },
-  clipCopy: {
+  badgeIconLayer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetBackdrop: {
+    backgroundColor: "rgba(0, 0, 0, 0.16)",
     flex: 1,
-    gap: 3,
+    justifyContent: "flex-end",
   },
-  clipTitle: {
+  sheet: {
+    alignItems: "center",
+    backgroundColor: theme.background,
+    borderTopLeftRadius: 34,
+    borderTopRightRadius: 34,
+    gap: 24,
+    minHeight: 520,
+    paddingHorizontal: 24,
+    paddingBottom: 42,
+    paddingTop: 78,
+  },
+  sheetTitle: {
+    color: theme.text,
+    fontSize: 31,
+    fontWeight: "900",
+    lineHeight: 38,
+    textAlign: "center",
+  },
+  sheetMessage: {
+    backgroundColor: theme.surfaceRaised,
+    borderRadius: 8,
+    maxWidth: 330,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    width: "86%",
+  },
+  sheetMessageText: {
     color: theme.text,
     fontSize: 16,
     fontWeight: "800",
+    lineHeight: 22,
+    textAlign: "center",
   },
-  clipMeta: {
-    color: theme.textSubtle,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  clipText: {
+  progressText: {
     color: theme.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  clipResult: {
-    color: theme.success,
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  playRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  playButton: {
-    alignItems: "center",
-    backgroundColor: theme.journal,
-    borderRadius: 24,
-    flex: 1,
-    flexDirection: "row",
-    gap: 6,
-    justifyContent: "center",
-    minHeight: 42,
-  },
-  playButtonPressed: {
-    opacity: 0.78,
-  },
-  playButtonDisabled: {
-    backgroundColor: theme.surfaceRaised,
-    borderColor: "rgba(0, 0, 0, 0.08)",
-    borderWidth: 1,
-  },
-  playButtonText: {
-    color: theme.backgroundDeep,
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  playButtonTextDisabled: {
-    color: theme.textSubtle,
-  },
-  uriBlock: {
-    backgroundColor: theme.surfaceRaised,
-    borderRadius: 24,
-    gap: 4,
-    padding: 10,
-  },
-  uriText: {
-    color: theme.textSubtle,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  monthPanel: {
-    backgroundColor: theme.surfaceRaised,
-    borderColor: "rgba(0, 0, 0, 0.08)",
-    borderRadius: 24,
-    borderWidth: 1,
-    gap: 10,
-    padding: 16,
-  },
-  checkpointRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 10,
-    minHeight: 40,
-  },
-  checkpointNumber: {
-    color: theme.journal,
     fontSize: 13,
     fontWeight: "800",
-    width: 18,
-  },
-  checkpointText: {
-    color: theme.text,
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  checkpointState: {
-    color: theme.textSubtle,
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
   },
 });
+
+function toImperativePhrase(description: string): string {
+  const [firstWord, ...rest] = description.split(" ");
+  const imperativeByGerund: Record<string, string> = {
+    completing: "Complete",
+    finishing: "Finish",
+    passing: "Pass",
+    practicing: "Practice",
+    recording: "Record",
+  };
+  const imperative =
+    imperativeByGerund[firstWord] ??
+    `${firstWord.charAt(0).toUpperCase()}${firstWord.slice(1)}`;
+
+  return `${imperative} ${rest.join(" ")}`;
+}
+
+function roundedPolygonPath(
+  vertices: ReadonlyArray<{ x: number; y: number }>,
+  cornerRadius: number,
+): string {
+  const count = vertices.length;
+  let path = "";
+
+  for (let index = 0; index < count; index += 1) {
+    const previous = vertices[(index - 1 + count) % count];
+    const current = vertices[index];
+    const next = vertices[(index + 1) % count];
+
+    const incoming = {
+      x: current.x - previous.x,
+      y: current.y - previous.y,
+    };
+    const outgoing = {
+      x: next.x - current.x,
+      y: next.y - current.y,
+    };
+    const incomingLength = Math.hypot(incoming.x, incoming.y);
+    const outgoingLength = Math.hypot(outgoing.x, outgoing.y);
+    const incomingTrim = Math.min(cornerRadius, incomingLength / 2);
+    const outgoingTrim = Math.min(cornerRadius, outgoingLength / 2);
+
+    const start = {
+      x: current.x - (incoming.x / incomingLength) * incomingTrim,
+      y: current.y - (incoming.y / incomingLength) * incomingTrim,
+    };
+    const end = {
+      x: current.x + (outgoing.x / outgoingLength) * outgoingTrim,
+      y: current.y + (outgoing.y / outgoingLength) * outgoingTrim,
+    };
+
+    path +=
+      index === 0
+        ? `M ${start.x} ${start.y} `
+        : `L ${start.x} ${start.y} `;
+    path += `Q ${current.x} ${current.y} ${end.x} ${end.y} `;
+  }
+
+  return `${path}Z`;
+}
