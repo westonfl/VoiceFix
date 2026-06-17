@@ -1,10 +1,12 @@
 import io
+import json
 
 import numpy as np
 from fastapi.testclient import TestClient
 from scipy.io import wavfile
 
 from app import chat as chat_module
+from app import main as main_module
 from app.audio import SAMPLE_RATE
 from app.main import app
 
@@ -105,6 +107,36 @@ def test_chat_upstream_error_returns_503(monkeypatch):
 
     assert response.status_code == 503
     assert response.json()["detail"] == "Coach service unavailable. Try again later."
+
+
+def test_chat_stream_returns_sse_deltas(monkeypatch):
+    async def fake_stream(request):
+        yield "Try a **smaller**"
+        yield " hiss."
+
+    monkeypatch.setenv("NVIDIA_API_KEY", "test-key")
+    monkeypatch.setattr(main_module, "generate_chat_reply_stream", fake_stream)
+
+    response = client.post(
+        "/api/chat/stream",
+        json={
+            "language": "en",
+            "messages": [{"role": "user", "content": "How do I keep a hiss steady?"}],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    events = [
+        json.loads(line.removeprefix("data: "))
+        for line in response.text.splitlines()
+        if line.startswith("data: ")
+    ]
+    assert events == [
+        {"delta": "Try a **smaller**"},
+        {"delta": " hiss."},
+        {"done": True},
+    ]
 
 
 def test_month_one_analyze_accepts_wav():

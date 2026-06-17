@@ -1,3 +1,5 @@
+import { fetch } from "expo/fetch";
+
 import { getAnalysisServerUrl } from "@/constants/env";
 
 import type { MainAppLanguage } from "./localization";
@@ -19,6 +21,12 @@ export type CoachChatContext = {
 export type CoachChatResponse = {
   reply: string;
   model: string;
+};
+
+type CoachStreamEvent = {
+  delta?: string;
+  done?: boolean;
+  error?: string;
 };
 
 export class CoachChatError extends Error {
@@ -94,5 +102,113 @@ export async function askCoach(input: {
     });
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+export async function streamCoach(
+  input: {
+    language: MainAppLanguage;
+    messages: CoachChatMessage[];
+    context: CoachChatContext;
+  },
+  onDelta: (delta: string) => void,
+): Promise<void> {
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const url = `${getAnalysisServerUrl()}/api/chat/stream`;
+  const armTimeout = () => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(() => controller.abort(), COACH_CHAT_TIMEOUT_MS);
+  };
+  armTimeout();
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "text/event-stream",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new CoachChatError(
+        `Coach returned ${response.status}`,
+        response.status,
+        detail,
+      );
+    }
+
+    if (!response.body) {
+      throw new CoachChatError("Coach returned no response stream.");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let receivedContent = false;
+    let receivedDone = false;
+
+    while (!receivedDone) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      armTimeout();
+      buffer += decoder.decode(value, { stream: true });
+
+      const events = buffer.split("\n\n");
+      buffer = events.pop() ?? "";
+      for (const rawEvent of events) {
+        const data = rawEvent
+          .split("\n")
+          .find((line) => line.startsWith("data:"))
+          ?.slice(5)
+          .trim();
+        if (!data) {
+          continue;
+        }
+
+        const event = JSON.parse(data) as CoachStreamEvent;
+        if (event.error) {
+          throw new CoachChatError(event.error, 503);
+        }
+        if (event.delta) {
+          receivedContent = true;
+          onDelta(event.delta);
+        }
+        if (event.done) {
+          receivedDone = true;
+          break;
+        }
+      }
+    }
+
+    if (!receivedDone || !receivedContent) {
+      throw new CoachChatError("Coach response ended unexpectedly.");
+    }
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new CoachChatError(
+        `Coach timed out after ${COACH_CHAT_TIMEOUT_MS / 1000}s without data`,
+        undefined,
+        { timeoutMs: COACH_CHAT_TIMEOUT_MS, url },
+      );
+    }
+    if (error instanceof CoachChatError) {
+      throw error;
+    }
+    throw new CoachChatError("Could not reach the VoiceFix coach.", undefined, {
+      url,
+    });
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
   }
 }

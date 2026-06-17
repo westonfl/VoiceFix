@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import logging
 import shutil
 import tempfile
@@ -7,12 +8,17 @@ from typing import Annotated
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .analyzer import analyze_samples
 from .audio import AudioDecodeError, decode_audio
-from .chat import ChatServiceUnavailable, generate_chat_reply
+from .chat import (
+    ChatServiceUnavailable,
+    generate_chat_reply,
+    generate_chat_reply_stream,
+    require_nvidia_api_key,
+)
 from .models import ChatRequest, ChatResponse, DrillId, Language, MonthOneAnalysisResponse, TakeKind
 
 
@@ -86,6 +92,30 @@ async def coach_chat(request: ChatRequest) -> ChatResponse:
     except ChatServiceUnavailable as exc:
         logger.warning("chat_unavailable detail=%s", exc)
         raise HTTPException(status_code=503, detail="Coach service unavailable. Try again later.") from exc
+
+
+@app.post("/api/chat/stream")
+async def coach_chat_stream(request: ChatRequest) -> StreamingResponse:
+    try:
+        require_nvidia_api_key()
+    except ChatServiceUnavailable as exc:
+        logger.warning("chat_stream_unavailable detail=%s", exc)
+        raise HTTPException(status_code=503, detail="Coach service unavailable. Try again later.") from exc
+
+    async def event_stream():
+        try:
+            async for delta in generate_chat_reply_stream(request):
+                yield f"data: {json.dumps({'delta': delta})}\n\n"
+            yield f"data: {json.dumps({'done': True})}\n\n"
+        except ChatServiceUnavailable as exc:
+            logger.warning("chat_stream_unavailable detail=%s", exc)
+            yield f"data: {json.dumps({'error': 'Coach service unavailable. Try again later.'})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post("/api/month-one/analyze", response_model=MonthOneAnalysisResponse)

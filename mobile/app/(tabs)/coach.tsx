@@ -1,5 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -10,12 +10,13 @@ import {
   TextInput,
   View,
 } from "react-native";
+import Markdown from "react-native-markdown-display";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { VoiceFixTheme as theme } from "@/constants/theme";
 import {
-  askCoach,
   CoachChatError,
+  streamCoach,
   type CoachChatMessage,
 } from "@/features/prototype/coachChat";
 import { mainAppText } from "@/features/prototype/localization";
@@ -34,7 +35,9 @@ export default function CoachScreen() {
   const [messages, setMessages] = useState<CoachChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [hasStreamStarted, setHasStreamStarted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const messagesRef = useRef<ScrollView>(null);
   const currentSession = useMemo(
     () =>
       currentWeek.dailySessions.find(
@@ -47,26 +50,36 @@ export default function CoachScreen() {
 
   async function sendMessages(nextMessages: CoachChatMessage[]) {
     setIsSending(true);
+    setHasStreamStarted(false);
     setError(null);
 
     try {
-      const response = await askCoach({
-        language: state.language,
-        messages: nextMessages.slice(-12),
-        context: {
-          currentWeekNumber: state.currentWeekNumber,
-          currentDayNumber: state.currentDayNumber,
-          currentExerciseTitle,
+      let assistantContent = "";
+      await streamCoach(
+        {
+          language: state.language,
+          messages: nextMessages.slice(-12),
+          context: {
+            currentWeekNumber: state.currentWeekNumber,
+            currentDayNumber: state.currentDayNumber,
+            currentExerciseTitle,
+          },
         },
-      });
-      setMessages([
-        ...nextMessages,
-        { role: "assistant", content: response.reply },
-      ]);
+        (delta) => {
+          assistantContent += delta;
+          setHasStreamStarted(true);
+          setMessages([
+            ...nextMessages,
+            { role: "assistant", content: assistantContent },
+          ]);
+        },
+      );
     } catch (sendError) {
+      setMessages(nextMessages);
       setError(getCoachErrorMessage(sendError));
     } finally {
       setIsSending(false);
+      setHasStreamStarted(false);
     }
   }
 
@@ -114,6 +127,10 @@ export default function CoachScreen() {
         <ScrollView
           contentContainerStyle={styles.messagesContent}
           keyboardShouldPersistTaps="handled"
+          onContentSizeChange={() =>
+            messagesRef.current?.scrollToEnd({ animated: false })
+          }
+          ref={messagesRef}
           showsVerticalScrollIndicator={false}
           style={styles.messages}
         >
@@ -153,7 +170,7 @@ export default function CoachScreen() {
             ))
           )}
 
-          {isSending ? (
+          {isSending && !hasStreamStarted ? (
             <View style={styles.thinkingRow}>
               <View style={styles.thinkingDot} />
               <Text style={styles.thinkingText}>Coach is thinking...</Text>
@@ -256,14 +273,13 @@ function MessageBubble({ message }: { message: CoachChatMessage }) {
           isUser ? styles.userBubble : styles.coachBubble,
         ]}
       >
-        <Text
-          style={[
-            styles.messageText,
-            isUser ? styles.userMessageText : styles.coachMessageText,
-          ]}
-        >
-          {message.content}
-        </Text>
+        {isUser ? (
+          <Text style={[styles.messageText, styles.userMessageText]}>
+            {message.content}
+          </Text>
+        ) : (
+          <Markdown style={markdownStyles}>{message.content}</Markdown>
+        )}
       </View>
     </View>
   );
@@ -385,13 +401,14 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     borderRadius: 22,
-    maxWidth: "82%",
+    maxWidth: "88%",
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   userBubble: {
     backgroundColor: theme.text,
     borderTopRightRadius: 8,
+    maxWidth: "82%",
   },
   coachBubble: {
     backgroundColor: theme.surface,
@@ -405,9 +422,6 @@ const styles = StyleSheet.create({
   },
   userMessageText: {
     color: theme.background,
-  },
-  coachMessageText: {
-    color: theme.text,
   },
   thinkingRow: {
     alignItems: "center",
@@ -496,5 +510,109 @@ const styles = StyleSheet.create({
   },
   sendButtonPressed: {
     transform: [{ scale: 0.96 }],
+  },
+});
+
+const markdownStyles = StyleSheet.create({
+  body: {
+    color: theme.text,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  paragraph: {
+    marginBottom: 10,
+    marginTop: 0,
+  },
+  strong: {
+    fontWeight: "800",
+  },
+  heading1: {
+    color: theme.text,
+    fontSize: 20,
+    fontWeight: "900",
+    lineHeight: 25,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  heading2: {
+    color: theme.text,
+    fontSize: 18,
+    fontWeight: "900",
+    lineHeight: 23,
+    marginBottom: 7,
+    marginTop: 4,
+  },
+  heading3: {
+    color: theme.text,
+    fontSize: 16,
+    fontWeight: "800",
+    lineHeight: 22,
+    marginBottom: 6,
+    marginTop: 2,
+  },
+  bullet_list: {
+    marginBottom: 8,
+    marginTop: 0,
+  },
+  ordered_list: {
+    marginBottom: 8,
+    marginTop: 0,
+  },
+  list_item: {
+    marginBottom: 5,
+  },
+  bullet_list_icon: {
+    color: theme.textMuted,
+    marginRight: 7,
+  },
+  ordered_list_icon: {
+    color: theme.textMuted,
+    fontWeight: "800",
+    marginRight: 7,
+  },
+  code_inline: {
+    backgroundColor: theme.primarySoft,
+    borderColor: theme.border,
+    borderRadius: 4,
+    borderWidth: 1,
+    color: theme.text,
+    fontSize: 13,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  fence: {
+    backgroundColor: theme.primarySoft,
+    borderColor: theme.border,
+    borderRadius: 6,
+    borderWidth: 1,
+    color: theme.text,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 10,
+    padding: 10,
+  },
+  code_block: {
+    backgroundColor: theme.primarySoft,
+    borderColor: theme.border,
+    borderRadius: 6,
+    borderWidth: 1,
+    color: theme.text,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 10,
+    padding: 10,
+  },
+  blockquote: {
+    backgroundColor: theme.primarySoft,
+    borderLeftColor: theme.textMuted,
+    borderLeftWidth: 3,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  link: {
+    color: theme.primary,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
 });
