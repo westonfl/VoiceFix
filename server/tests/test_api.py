@@ -6,7 +6,6 @@ from fastapi.testclient import TestClient
 from scipy.io import wavfile
 
 from app import chat as chat_module
-from app import main as main_module
 from app.audio import SAMPLE_RATE
 from app.main import app
 
@@ -110,12 +109,14 @@ def test_chat_upstream_error_returns_503(monkeypatch):
 
 
 def test_chat_stream_returns_sse_deltas(monkeypatch):
-    async def fake_stream(request):
-        yield "Try a **smaller**"
-        yield " hiss."
+    seen: dict[str, object] = {}
+
+    async def fake_completion(payload: dict[str, object], api_key: str) -> dict[str, object]:
+        seen["payload"] = payload
+        return {"choices": [{"message": {"content": "Try a **smaller** hiss."}}]}
 
     monkeypatch.setenv("NVIDIA_API_KEY", "test-key")
-    monkeypatch.setattr(main_module, "generate_chat_reply_stream", fake_stream)
+    monkeypatch.setattr(chat_module, "request_nvidia_completion", fake_completion)
 
     response = client.post(
         "/api/chat/stream",
@@ -132,11 +133,17 @@ def test_chat_stream_returns_sse_deltas(monkeypatch):
         for line in response.text.splitlines()
         if line.startswith("data: ")
     ]
-    assert events == [
-        {"delta": "Try a **smaller**"},
-        {"delta": " hiss."},
-        {"done": True},
-    ]
+    assert "".join(event.get("delta", "") for event in events) == "Try a **smaller** hiss."
+    assert events[-1] == {"done": True}
+    payload = seen["payload"]
+    assert isinstance(payload, dict)
+    assert payload["stream"] is False
+
+
+def test_chat_stream_chunks_preserve_markdown():
+    reply = "1. **Small hiss**\n2. Keep it easy."
+
+    assert "".join(chat_module.chunk_reply(reply, target_chars=10)) == reply
 
 
 def test_month_one_analyze_accepts_wav():
