@@ -216,14 +216,14 @@ export default function CoachScreen() {
 
 function getCoachErrorMessage(error: unknown) {
   if (isCoachChatError(error) && error.status === 503) {
-    return "Coach needs the backend running with NVIDIA_API_KEY set. Add the key on the server, then retry.";
+    return "Coach could not get an answer right now. Please wait a moment, then retry.";
   }
 
   if (isCoachChatError(error) && error.status === undefined) {
     return "Could not reach the VoiceFix server. Start the backend, then retry.";
   }
 
-  return "Coach needs the backend running with NVIDIA_API_KEY set. Start the server, add the key, then retry.";
+  return "Coach hit an unexpected error. Please try again.";
 }
 
 function isCoachChatError(error: unknown): error is CoachChatError {

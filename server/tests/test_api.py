@@ -83,6 +83,7 @@ def test_chat_returns_mocked_nvidia_reply(monkeypatch):
     payload = seen["payload"]
     assert isinstance(payload, dict)
     assert payload["model"] == "google/gemma-4-31b-it"
+    assert payload["max_tokens"] == 320
     assert payload["stream"] is False
     assert payload["chat_template_kwargs"] == {"enable_thinking": False}
 

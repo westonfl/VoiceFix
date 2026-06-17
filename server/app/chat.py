@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from typing import Any
 
 import httpx
@@ -11,7 +12,8 @@ logger = logging.getLogger("uvicorn.error")
 
 NVIDIA_CHAT_COMPLETIONS_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 NVIDIA_CHAT_MODEL = os.getenv("NVIDIA_CHAT_MODEL", "google/gemma-4-31b-it")
-NVIDIA_CHAT_TIMEOUT_SEC = 45.0
+NVIDIA_CHAT_CONNECT_TIMEOUT_SEC = 10.0
+NVIDIA_CHAT_READ_TIMEOUT_SEC = 90.0
 
 VOICEFIX_SYSTEM_PROMPT = """You are VoiceFix Coach, a calm, precise singing-practice assistant inside the VoiceFix app.
 
@@ -50,12 +52,27 @@ async def request_nvidia_completion(payload: dict[str, Any], api_key: str) -> di
         "Content-Type": "application/json",
     }
 
-    async with httpx.AsyncClient(timeout=NVIDIA_CHAT_TIMEOUT_SEC) as client:
+    timeout = httpx.Timeout(
+        connect=NVIDIA_CHAT_CONNECT_TIMEOUT_SEC,
+        read=NVIDIA_CHAT_READ_TIMEOUT_SEC,
+        write=NVIDIA_CHAT_CONNECT_TIMEOUT_SEC,
+        pool=NVIDIA_CHAT_CONNECT_TIMEOUT_SEC,
+    )
+    started_at = time.monotonic()
+    logger.info("nvidia_chat_request model=%s", payload.get("model"))
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
         response = await client.post(
             NVIDIA_CHAT_COMPLETIONS_URL,
             headers=headers,
             json=payload,
         )
+
+    logger.info(
+        "nvidia_chat_response status=%s elapsed_sec=%.2f",
+        response.status_code,
+        time.monotonic() - started_at,
+    )
 
     if response.status_code >= 400:
         logger.warning(
@@ -97,7 +114,7 @@ async def generate_chat_reply(request: ChatRequest) -> ChatResponse:
     payload = {
         "model": NVIDIA_CHAT_MODEL,
         "messages": messages,
-        "max_tokens": 900,
+        "max_tokens": 320,
         "temperature": 1.0,
         "top_p": 0.95,
         "stream": False,

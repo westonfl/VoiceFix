@@ -2,7 +2,8 @@ import { getAnalysisServerUrl } from "@/constants/env";
 
 import type { MainAppLanguage } from "./localization";
 
-const COACH_CHAT_TIMEOUT_MS = 45_000;
+// Keep the client deadline above the server's 90-second NVIDIA read timeout.
+const COACH_CHAT_TIMEOUT_MS = 100_000;
 
 export type CoachChatMessage = {
   role: "user" | "assistant";
