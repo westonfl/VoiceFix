@@ -78,14 +78,16 @@ def test_chat_returns_mocked_nvidia_reply(monkeypatch):
     assert response.status_code == 200
     assert response.json() == {
         "reply": "Try a smaller hiss and stop before squeezing.",
-        "model": "google/gemma-4-31b-it",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
     }
     assert seen["api_key"] == "test-key"
     payload = seen["payload"]
     assert isinstance(payload, dict)
-    assert payload["model"] == "google/gemma-4-31b-it"
+    assert payload["model"] == "nvidia/nemotron-3-super-120b-a12b"
     assert payload["max_tokens"] == 320
     assert payload["stream"] is False
+    assert payload["temperature"] == 1.0
+    assert payload["top_p"] == 0.95
     assert payload["chat_template_kwargs"] == {"enable_thinking": False}
 
 
@@ -111,12 +113,13 @@ def test_chat_upstream_error_returns_503(monkeypatch):
 def test_chat_stream_returns_sse_deltas(monkeypatch):
     seen: dict[str, object] = {}
 
-    async def fake_completion(payload: dict[str, object], api_key: str) -> dict[str, object]:
+    async def fake_stream(payload: dict[str, object], api_key: str):
         seen["payload"] = payload
-        return {"choices": [{"message": {"content": "Try a **smaller** hiss."}}]}
+        yield "Try a "
+        yield "**smaller** hiss."
 
     monkeypatch.setenv("NVIDIA_API_KEY", "test-key")
-    monkeypatch.setattr(chat_module, "request_nvidia_completion", fake_completion)
+    monkeypatch.setattr(chat_module, "stream_nvidia_completion", fake_stream)
 
     response = client.post(
         "/api/chat/stream",
@@ -137,15 +140,36 @@ def test_chat_stream_returns_sse_deltas(monkeypatch):
     assert events[-1] == {"done": True}
     payload = seen["payload"]
     assert isinstance(payload, dict)
-    assert payload["stream"] is False
+    assert payload["stream"] is True
 
 
-def test_chat_stream_chunks_preserve_markdown():
-    reply = "1. **Small hiss**\n2. Keep it easy."
+def test_chat_stream_falls_back_before_emitting_content(monkeypatch):
+    seen_models: list[str] = []
 
-    assert "".join(chat_module.chunk_reply(reply, target_chars=10)) == reply
+    async def fake_stream(payload: dict[str, object], api_key: str):
+        model = str(payload["model"])
+        seen_models.append(model)
+        if model == "nvidia/nemotron-3-super-120b-a12b":
+            raise chat_module.ChatServiceUnavailable("primary timed out")
+        yield "Fallback worked."
 
+    monkeypatch.setenv("NVIDIA_API_KEY", "test-key")
+    monkeypatch.setattr(chat_module, "stream_nvidia_completion", fake_stream)
 
+    response = client.post(
+        "/api/chat/stream",
+        json={
+            "language": "en",
+            "messages": [{"role": "user", "content": "Can you help?"}],
+        },
+    )
+
+    assert response.status_code == 200
+    assert "Fallback worked." in response.text
+    assert seen_models == [
+        "nvidia/nemotron-3-super-120b-a12b",
+        "google/gemma-3n-e4b-it",
+    ]
 def test_month_one_analyze_accepts_wav():
     t = np.linspace(0, 3.0, SAMPLE_RATE * 3, endpoint=False)
     samples = 0.15 * np.sin(2 * np.pi * 180 * t)

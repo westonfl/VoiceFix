@@ -103,6 +103,8 @@ async def coach_chat_stream(request: ChatRequest) -> StreamingResponse:
         raise HTTPException(status_code=503, detail="Coach service unavailable. Try again later.") from exc
 
     async def event_stream():
+        # Flush headers immediately so clients and proxies know the SSE request is alive.
+        yield ": connected\n\n"
         try:
             async for delta in generate_chat_reply_stream(request):
                 yield f"data: {json.dumps({'delta': delta})}\n\n"
