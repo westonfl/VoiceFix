@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { VoiceFixTheme as theme } from "@/constants/theme";
+import { RehearTheme as theme } from "@/constants/theme";
 import {
   displayPreferenceValue,
   mainAppLanguageOptions,
@@ -37,10 +37,12 @@ import {
   requestNotificationPermission,
 } from "@/features/settings/permissions";
 import { usePrototype } from "@/features/prototype/state";
+import { useSubscription } from "@/features/subscription/SubscriptionProvider";
 
 export default function SettingsScreen() {
   const { state, resetPrototype, setLanguage, setTrainingPreference } =
     usePrototype();
+  const { openCustomerCenter } = useSubscription();
   const router = useRouter();
   const [languageOpen, setLanguageOpen] = useState(false);
   const [reminderPickerVisible, setReminderPickerVisible] = useState(false);
@@ -90,6 +92,17 @@ export default function SettingsScreen() {
       Alert.alert(
         text.settings.analyzeAudioFailedTitle,
         `${text.settings.analyzeAudioFailedBody}${detail}`,
+      );
+    }
+  }
+
+  async function manageSubscription() {
+    try {
+      await openCustomerCenter();
+    } catch {
+      Alert.alert(
+        "Couldn’t open subscription settings",
+        "Please try again in a moment.",
       );
     }
   }
@@ -194,6 +207,16 @@ export default function SettingsScreen() {
               label={text.settings.bestStreak}
             />
           </View>
+        </View>
+
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>Subscription</Text>
+          <SettingRow
+            icon="credit-card"
+            label="Manage subscription"
+            value="Active plan"
+            onPress={manageSubscription}
+          />
         </View>
 
         <PermissionsSection text={text.settings} />

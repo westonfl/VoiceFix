@@ -1,4 +1,4 @@
-# VoiceFix - Screen catalog (onboarding + main app)
+# Rehear - Screen catalog (onboarding + main app)
 
 Visual and interaction spec so you can picture each screen. Layout is platform-agnostic, phone-first, and can adapt to web.
 
@@ -33,7 +33,7 @@ During a session, hide the tab bar and show session progress instead.
 
 # Part 1 - Long onboarding
 
-Onboarding should be **20+ screens minimum**. The goal is not to teach everything; the goal is to make the user feel, before the first session, that VoiceFix has understood their situation and built a personal plan. This is closer to a high-conversion coaching intake than a short app intro.
+Onboarding should be **20+ screens minimum**. The goal is not to teach everything; the goal is to make the user feel, before the first session, that Rehear has understood their situation and built a personal plan. This is closer to a high-conversion coaching intake than a short app intro.
 
 The user should finish onboarding thinking:
 
@@ -112,7 +112,7 @@ The requirement is **minimum 20 screens**. The recommended product spec is **28 
 
 **Content**
 
-- Logo / wordmark: **VoiceFix**
+- Logo / wordmark: **Rehear**
 - Tagline: *Hear what changed.*
 - Tone: calm, precise, not flashy.
 
@@ -146,7 +146,7 @@ The requirement is **minimum 20 screens**. The recommended product spec is **28 
 **Content blocks**
 
 - **Karaoke apps:** Did you hit the note?
-- **VoiceFix:** What probably made the note unstable?
+- **Rehear:** What probably made the note unstable?
 - **Your plan:** Try one fix, repeat the same task, compare against yourself.
 
 ---
@@ -364,7 +364,7 @@ The requirement is **minimum 20 screens**. The recommended product spec is **28 
 - Pain when singing
 - Not sure
 
-**Required copy:** *VoiceFix is practice feedback, not medical advice. If singing hurts, stop and consider a qualified professional.*
+**Required copy:** *Rehear is practice feedback, not medical advice. If singing hurts, stop and consider a qualified professional.*
 
 **Routing note:** Pain disables range-growth positioning and routes to gentle reset / referral copy.
 
@@ -380,7 +380,7 @@ The requirement is **minimum 20 screens**. The recommended product spec is **28 
 
 **Content**
 
-- VoiceFix listens only during exercises you start.
+- Rehear listens only during exercises you start.
 - Clips are private by default.
 - Saved clips are used for your journal and progress comparisons.
 - You can delete saved clips later.

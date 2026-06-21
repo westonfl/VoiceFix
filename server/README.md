@@ -1,4 +1,4 @@
-# VoiceFix Analysis Server
+# Rehear Analysis Server
 
 FastAPI service for Month 1 breath and resonance analysis. The engine uses signal heuristics only; it does not diagnose breathing mechanics, vocal anatomy, or medical conditions.
 

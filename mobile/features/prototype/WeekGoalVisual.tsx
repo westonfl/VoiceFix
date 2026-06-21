@@ -1,7 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { StyleSheet, View } from "react-native";
 
-import { VoiceFixTheme as theme } from "@/constants/theme";
+import { RehearTheme as theme } from "@/constants/theme";
 import {
   CardGradientBackground,
   type CardGradientVariant,

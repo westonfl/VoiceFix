@@ -801,6 +801,6 @@ export function getPlacementFromAnswers(
     startWeek: 1,
     emphasis: ["Breath awareness", "Gentle sound", "Resonance"],
     reason:
-      "No single issue dominates yet, so VoiceFix starts with the safest fixed foundation path.",
+      "No single issue dominates yet, so Rehear starts with the safest fixed foundation path.",
   };
 }

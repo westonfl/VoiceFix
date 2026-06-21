@@ -16,7 +16,10 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    cp .env.example .env
    ```
 
-   Set `EXPO_PUBLIC_ANALYSIS_SERVER_URL` in `.env` to your analysis server URL. Restart Expo after changing it.
+   Set `EXPO_PUBLIC_ANALYSIS_SERVER_URL` in `.env` to your analysis server URL.
+   Add the RevenueCat public SDK key for each supported platform and make sure
+   `EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID` matches the entitlement attached to
+   your products. Restart Expo after changing environment values.
 
 3. Start the app
 
@@ -60,6 +63,11 @@ does not depend on Metro, use:
 ```bash
 npm run ios:device:release
 ```
+
+RevenueCat runs in Preview API mode inside Expo Go. Use a development build or
+release build to test real StoreKit / Google Play purchases. The app presents
+the current RevenueCat offering as a hard paywall immediately after onboarding;
+configure that offering and its paywall in the RevenueCat dashboard.
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 

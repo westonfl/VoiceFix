@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
-import { VoiceFixTheme as theme } from '@/constants/theme';
+import { RehearTheme as theme } from '@/constants/theme';
 
 export const headerIconButtonStyles = StyleSheet.create({
   button: {

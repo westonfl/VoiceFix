@@ -1,4 +1,4 @@
-# VoiceFix — Product Document
+# Rehear — Product Document
 
 Single source of truth for vision, MVP, how the roadmap fits the product, and what problem we solve. Update this file as decisions change.
 
@@ -155,7 +155,7 @@ Onboarding is intentionally **longer than a generic app intro** because it must 
 
 ## 12. Naming
 
-Working name **VoiceFix** emphasizes relief and clarity for beginners. Alternatives from earlier exploration: **Vocalens** (diagnostic “lens”), **Reson** (premium, abstract). Rename in this doc if product direction shifts.
+Working name **Rehear** emphasizes relief and clarity for beginners. Alternatives from earlier exploration: **Vocalens** (diagnostic “lens”), **Reson** (premium, abstract). Rename in this doc if product direction shifts.
 
 ---
 

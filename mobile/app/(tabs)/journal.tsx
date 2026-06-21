@@ -19,7 +19,7 @@ import Svg, {
 } from "react-native-svg";
 
 import { CloseIconButton, headerIconButtonStyles } from "@/constants/headerButtons";
-import { VoiceFixTheme as theme } from "@/constants/theme";
+import { RehearTheme as theme } from "@/constants/theme";
 import { mainAppText } from "@/features/prototype/localization";
 import { isMonthlyTestPassed, usePrototype } from "@/features/prototype/state";
 
@@ -264,13 +264,7 @@ function makeAchievement({
 }
 
 function getExerciseProgress(state: ReturnType<typeof usePrototype>["state"]) {
-  return state.savedClips.reduce((total, clip) => {
-    if (typeof clip.recordedPracticeMs === "number") {
-      return total + Math.max(1, Math.round(clip.recordedPracticeMs / 30000));
-    }
-
-    return total + 1;
-  }, 0);
+  return state.savedClips.length;
 }
 
 function getDailyGoalProgress(state: ReturnType<typeof usePrototype>["state"]) {

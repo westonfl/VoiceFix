@@ -1,7 +1,7 @@
 [project]
-name = "voicefix-analysis-server"
+name = "rehear-analysis-server"
 version = "0.1.0"
-description = "VoiceFix Month 1 breath and resonance analysis server"
+description = "Rehear Month 1 breath and resonance analysis server"
 requires-python = ">=3.11,<3.12"
 dependencies = [
   "fastapi>=0.115.0",

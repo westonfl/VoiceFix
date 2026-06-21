@@ -13,7 +13,7 @@ import {
 import Markdown from "react-native-markdown-display";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { VoiceFixTheme as theme } from "@/constants/theme";
+import { RehearTheme as theme } from "@/constants/theme";
 import {
   CoachChatError,
   streamCoach,
@@ -116,7 +116,7 @@ export default function CoachScreen() {
         <View style={styles.header}>
           <View style={styles.kickerRow}>
             <MaterialIcons name="forum" size={16} color={theme.textSubtle} />
-            <Text style={styles.kicker}>VOICEFIX COACH</Text>
+            <Text style={styles.kicker}>REHEAR COACH</Text>
           </View>
           <Text style={styles.title}>{text.tabs.coach}</Text>
           <Text style={styles.body}>
@@ -141,7 +141,7 @@ export default function CoachScreen() {
               </View>
               <Text style={styles.emptyTitle}>Start with one practical question.</Text>
               <Text style={styles.emptyBody}>
-                Coach answers stay focused on VoiceFix practice and will keep
+                Coach answers stay focused on Rehear practice and will keep
                 safety boundaries around pain or medical concerns.
               </Text>
               <View style={styles.promptList}>
@@ -202,7 +202,7 @@ export default function CoachScreen() {
           ]}
         >
           <TextInput
-            accessibilityLabel="Ask VoiceFix Coach"
+            accessibilityLabel="Ask Rehear Coach"
             editable={!isSending}
             multiline
             onChangeText={setDraft}
@@ -237,7 +237,7 @@ function getCoachErrorMessage(error: unknown) {
   }
 
   if (isCoachChatError(error) && error.status === undefined) {
-    return "Could not reach the VoiceFix server. Start the backend, then retry.";
+    return "Could not reach the Rehear server. Start the backend, then retry.";
   }
 
   return "Coach hit an unexpected error. Please try again.";

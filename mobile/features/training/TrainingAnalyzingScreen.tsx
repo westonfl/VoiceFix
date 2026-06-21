@@ -9,7 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { VoiceFixTheme as theme } from '@/constants/theme';
+import { RehearTheme as theme } from '@/constants/theme';
 import { SignalWave } from '@/features/onboarding/components';
 import type { mainAppText } from '@/features/prototype/localization';
 

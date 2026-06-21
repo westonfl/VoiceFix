@@ -4,7 +4,7 @@ import type { ComponentProps } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { VoiceFixTheme as theme } from "@/constants/theme";
+import { RehearTheme as theme } from "@/constants/theme";
 import {
   curriculum,
   getPhaseLabel,

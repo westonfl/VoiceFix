@@ -92,7 +92,7 @@ def _feedback_en(drill_id: DrillId, metrics: MonthOneMetrics, quality: Quality) 
             whatWeHeard=heard,
             whatItOftenMeans="This usually means the signal needs to be simpler before the app can compare it.",
             oneThingToTry="Record again with the phone a little away from your mouth in a quiet room.",
-            retryGoal="Give VoiceFix a small, clear take without pushing.",
+            retryGoal="Give Rehear a small, clear take without pushing.",
         )
 
     if drill_id == "sustained_hiss":
@@ -245,7 +245,7 @@ def _feedback_en(drill_id: DrillId, metrics: MonthOneMetrics, quality: Quality) 
 
     return Feedback(
         whatWeHeard="The take was usable and reasonably steady by these proxy measures.",
-        whatItOftenMeans="That gives VoiceFix enough signal to compare one small change.",
+        whatItOftenMeans="That gives Rehear enough signal to compare one small change.",
         oneThingToTry="Repeat the same drill with an easier start and clean ending.",
         retryGoal="Do not make it bigger; make it easier to repeat.",
     )

@@ -28,6 +28,7 @@ import {
 
 export type SavedClip = {
   id: string;
+  exerciseId?: string;
   title: string;
   weekNumber: number;
   dayNumber: number;
@@ -106,6 +107,7 @@ type PrototypeContextValue = {
   completeOnboarding: (answers: OnboardingAnswers, language?: Language) => void;
   completeSession: (
     clip: Omit<SavedClip, "id" | "weekNumber" | "dayNumber">,
+    target?: { weekNumber: number; dayNumber: number },
   ) => void;
   resetPrototype: () => void;
   setTrainingPreference: (
@@ -147,7 +149,8 @@ const initialState: PrototypeUserState = {
 };
 
 const PrototypeContext = createContext<PrototypeContextValue | null>(null);
-const STORAGE_KEY = "voicefix:mvp-state:v2";
+const STORAGE_KEY = "rehear:mvp-state:v2";
+const LEGACY_STORAGE_KEY = ["voice", "fix:mvp-state:v2"].join("");
 
 type StoredPrototypeUserState = Partial<PrototypeUserState> & {
   language?: Language;
@@ -286,10 +289,15 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
 
     async function hydrate() {
       try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        const stored =
+          (await AsyncStorage.getItem(STORAGE_KEY)) ??
+          (await AsyncStorage.getItem(LEGACY_STORAGE_KEY));
         if (stored && mounted) {
           const parsed = JSON.parse(stored) as StoredPrototypeUserState;
           setState(normalizeStoredState(parsed));
+          AsyncStorage.setItem(STORAGE_KEY, stored).catch(() => {
+            // Migration can retry on the next launch.
+          });
         }
       } catch {
         // If local state is corrupted, keep the default first-run state.
@@ -379,6 +387,7 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
 
   function completeSession(
     clip: Omit<SavedClip, "id" | "weekNumber" | "dayNumber">,
+    target?: { weekNumber: number; dayNumber: number },
   ) {
     setState((current) => {
       const nextStreak = current.completedToday
@@ -396,8 +405,8 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
           {
             ...clip,
             id: `${Date.now()}`,
-            weekNumber: current.currentWeekNumber,
-            dayNumber: current.currentDayNumber,
+            weekNumber: target?.weekNumber ?? current.currentWeekNumber,
+            dayNumber: target?.dayNumber ?? current.currentDayNumber,
           },
           ...current.savedClips,
         ],
@@ -412,6 +421,9 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
     });
     AsyncStorage.removeItem(STORAGE_KEY).catch(() => {
       // Reset still works in memory if storage deletion fails.
+    });
+    AsyncStorage.removeItem(LEGACY_STORAGE_KEY).catch(() => {
+      // Reset still works in memory if legacy cleanup fails.
     });
   }
 

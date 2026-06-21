@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { CardGradientVariant } from '@/features/onboarding/cardGradientBackground';
-import { VoiceFixTheme as theme } from '@/constants/theme';
+import { RehearTheme as theme } from '@/constants/theme';
 import {
   type mainAppText,
   type MainAppLanguage,

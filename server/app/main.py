@@ -23,7 +23,7 @@ from .models import ChatRequest, ChatResponse, DrillId, Language, MonthOneAnalys
 
 
 logger = logging.getLogger("uvicorn.error")
-app = FastAPI(title="VoiceFix Analysis Server", version="0.1.0")
+app = FastAPI(title="Rehear Analysis Server", version="0.1.0")
 SUPPORTED_DRILLS = [
     "sustained_hiss",
     "gentle_hum",
@@ -77,7 +77,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 def health() -> dict[str, object]:
     return {
         "status": "ok",
-        "service": "voicefix-analysis-server",
+        "service": "rehear-analysis-server",
         "version": app.version,
         "supportedDrills": SUPPORTED_DRILLS,
         "legacyAliases": LEGACY_DRILL_ALIASES,

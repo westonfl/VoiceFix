@@ -6,6 +6,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import "@/features/settings/notificationsSetup";
 import { PrototypeProvider } from '@/features/prototype/state';
+import { SubscriptionGate } from '@/features/subscription/SubscriptionGate';
+import { SubscriptionProvider } from '@/features/subscription/SubscriptionProvider';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -16,13 +18,17 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider value={DefaultTheme}>
         <PrototypeProvider>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="week/[weekNumber]" options={{ headerShown: false }} />
-            <Stack.Screen name="testing-center/[month]" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          </Stack>
-          <StatusBar style="dark" />
+          <SubscriptionProvider>
+            <SubscriptionGate>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="week/[weekNumber]" options={{ headerShown: false }} />
+                <Stack.Screen name="testing-center/[month]" options={{ headerShown: false }} />
+                <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+              </Stack>
+              <StatusBar style="dark" />
+            </SubscriptionGate>
+          </SubscriptionProvider>
         </PrototypeProvider>
       </ThemeProvider>
     </SafeAreaProvider>

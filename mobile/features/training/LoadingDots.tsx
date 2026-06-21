@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { VoiceFixTheme as theme } from '@/constants/theme';
+import { RehearTheme as theme } from '@/constants/theme';
 
 function LoadingDot({ delay }: { delay: number }) {
   const progress = useSharedValue(0);

@@ -5,7 +5,7 @@ import { Platform, StyleSheet } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, VoiceFixTheme as theme } from '@/constants/theme';
+import { Colors, RehearTheme as theme } from '@/constants/theme';
 import { mainAppText } from '@/features/prototype/localization';
 import { usePrototype } from '@/features/prototype/state';
 import { useColorScheme } from '@/hooks/use-color-scheme';

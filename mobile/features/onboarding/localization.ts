@@ -31,7 +31,7 @@ export const languageOptions: Array<{ id: Language; flag: string; abbr: string; 
 const koScreens: Record<string, LocalizedScreen> = {
   'ONB-01': {
     shortTitle: '시작',
-    eyebrow: 'VoiceFix',
+    eyebrow: 'Rehear',
     title: '무엇이 달라졌는지 들어보세요.',
     body: '짧은 음성 체크, 한 가지 유용한 힌트, 같은 테이크를 다시 해보는 개인 보이스 랩입니다.',
     primaryAction: '스튜디오 입장하기',
@@ -40,7 +40,7 @@ const koScreens: Record<string, LocalizedScreen> = {
     shortTitle: '약속',
     eyebrow: '90일 약속',
     title: '목소리는 다시 돌아올 때 달라집니다.',
-    body: 'VoiceFix는 90일 훈련 여정입니다. 여기서는 지구력이 중요합니다. 돌아와서 정직하게 녹음하고, 작은 한 가지를 고치고, 내일 다시 오세요. 그 노력이 곧 연습입니다.',
+    body: 'Rehear는 90일 훈련 여정입니다. 여기서는 지구력이 중요합니다. 돌아와서 정직하게 녹음하고, 작은 한 가지를 고치고, 내일 다시 오세요. 그 노력이 곧 연습입니다.',
     primaryAction: '3개월 여정 시작',
     bullets: ['고정된 12주 경로', '강도보다 지구력', '월 1회 유예일', '매 세션 한 번의 재시도'],
   },
@@ -48,11 +48,11 @@ const koScreens: Record<string, LocalizedScreen> = {
     shortTitle: '노래방 아님',
     eyebrow: '다른 연습 루프',
     title: '이건 노래방 점수가 아닙니다.',
-    body: '노래방 앱은 음을 맞췄는지 묻습니다. VoiceFix는 무엇이 음을 불안정하게 만들었을지 보고, 같은 과제를 다시 시도하게 합니다.',
+    body: '노래방 앱은 음을 맞췄는지 묻습니다. Rehear는 무엇이 음을 불안정하게 만들었을지 보고, 같은 과제를 다시 시도하게 합니다.',
     primaryAction: '계속하기',
     comparison: [
       { label: '노래방 앱', detail: '음을 맞췄나요?' },
-      { label: 'VoiceFix', detail: '테이크 사이에 무엇이 달라졌나요?' },
+      { label: 'Rehear', detail: '테이크 사이에 무엇이 달라졌나요?' },
       { label: '내 플랜', detail: '힌트 하나, 같은 드릴, 다시 시도.' },
     ],
   },
@@ -199,7 +199,7 @@ const koScreens: Record<string, LocalizedScreen> = {
     shortTitle: '안전',
     eyebrow: '목소리 건강',
     title: '통증, 조임, 밀어붙이는 느낌이 있나요?',
-    body: 'VoiceFix는 연습 피드백이며 의학적 조언이 아닙니다. 노래할 때 아프면 멈추고 전문가 상담을 고려하세요.',
+    body: 'Rehear는 연습 피드백이며 의학적 조언이 아닙니다. 노래할 때 아프면 멈추고 전문가 상담을 고려하세요.',
     primaryAction: '계속하기',
     options: {
       none: { label: '통증이나 조임 없음', detail: '일반 초보 난이도로 시작할 수 있습니다.' },
@@ -211,8 +211,8 @@ const koScreens: Record<string, LocalizedScreen> = {
   'ONB-15': {
     shortTitle: '개인정보',
     eyebrow: '개인정보와 마이크 신뢰',
-    title: 'VoiceFix가 언제 듣는지는 사용자가 통제합니다.',
-    body: 'VoiceFix는 사용자가 시작한 연습 중에만 듣습니다. 클립은 기본적으로 비공개이며 나중에 삭제할 수 있습니다.',
+    title: 'Rehear가 언제 듣는지는 사용자가 통제합니다.',
+    body: 'Rehear는 사용자가 시작한 연습 중에만 듣습니다. 클립은 기본적으로 비공개이며 나중에 삭제할 수 있습니다.',
     primaryAction: '마이크로 계속하기',
     bullets: ['갑작스러운 녹음 없음', '클립은 기본 비공개', '저널을 위해서만 저장'],
   },
@@ -293,7 +293,7 @@ const koScreens: Record<string, LocalizedScreen> = {
     shortTitle: '분석',
     eyebrow: '플랜 만드는 중',
     title: '답변과 음성 샘플을 읽고 있습니다.',
-    body: 'VoiceFix는 재능을 평가하는 것이 아니라 첫 초점을 고르는 중입니다.',
+    body: 'Rehear는 재능을 평가하는 것이 아니라 첫 초점을 고르는 중입니다.',
     primaryAction: '진단 요약 보기',
     bullets: ['목표 읽는 중', '편안함과 안전 확인 중', '5개 샘플 비교 중', '첫 14일 플랜 구성 중'],
   },
@@ -320,7 +320,7 @@ const koScreens: Record<string, LocalizedScreen> = {
   'ONB-27': {
     shortTitle: '알림',
     eyebrow: '매일 돌아오기',
-    title: 'VoiceFix가 언제 다시 불러드릴까요?',
+    title: 'Rehear가 언제 다시 불러드릴까요?',
     body: '매일의 목소리 습관은 노력이 캘린더 안에 자리를 가질 때 가장 잘 이어집니다. 같은 시간, 같은 작은 약속입니다.',
     primaryAction: '훈련 시간 설정',
     options: {
@@ -443,7 +443,7 @@ export const uiText = {
     focus: 'Focus:',
     stopIfHurts: 'Stop if anything hurts',
     micAccessTitle: 'Mic access for baseline checks',
-    micAccessBody: 'VoiceFix listens only during exercises you start.',
+    micAccessBody: 'Rehear listens only during exercises you start.',
     record: 'Record',
     stopAndSave: 'Stop and save',
     analyzing: 'Analyzing...',
@@ -460,7 +460,7 @@ export const uiText = {
     micDeniedTitle: 'Microphone access needed',
     micDeniedBody: 'Allow microphone access to run the voice check, or continue without it.',
     notificationAccessTitle: 'Daily reminder at your training time',
-    notificationAccessBody: 'VoiceFix sends one nudge per day. You can change the time or turn reminders off later.',
+    notificationAccessBody: 'Rehear sends one nudge per day. You can change the time or turn reminders off later.',
     notificationDeniedTitle: 'Notification access needed',
     notificationDeniedBody: 'Allow notifications to get your daily training reminder, or continue without them.',
     voiceCheckSkippedBody: 'You skipped the voice check. Continue to move on with quiz answers only.',
@@ -486,7 +486,7 @@ export const uiText = {
     focus: '초점:',
     stopIfHurts: '아프면 멈추기',
     micAccessTitle: '베이스라인 체크를 위한 마이크 접근',
-    micAccessBody: 'VoiceFix는 사용자가 시작한 연습 중에만 듣습니다.',
+    micAccessBody: 'Rehear는 사용자가 시작한 연습 중에만 듣습니다.',
     record: '녹음',
     stopAndSave: '중지하고 저장',
     analyzing: '분석 중...',
@@ -503,7 +503,7 @@ export const uiText = {
     micDeniedTitle: '마이크 접근이 필요합니다',
     micDeniedBody: '음성 체크를 하려면 마이크 접근을 허용하거나, 체크 없이 계속하세요.',
     notificationAccessTitle: '훈련 시간에 맞춘 일일 알림',
-    notificationAccessBody: 'VoiceFix는 하루에 한 번 알림을 보냅니다. 시간 변경이나 알림 끄기는 나중에 설정에서 할 수 있습니다.',
+    notificationAccessBody: 'Rehear는 하루에 한 번 알림을 보냅니다. 시간 변경이나 알림 끄기는 나중에 설정에서 할 수 있습니다.',
     notificationDeniedTitle: '알림 접근이 필요합니다',
     notificationDeniedBody: '매일 훈련 알림을 받으려면 알림을 허용하거나, 알림 없이 계속하세요.',
     voiceCheckSkippedBody: '음성 체크를 건너뛰었습니다. 퀴즈 답변만으로 계속 진행할 수 있습니다.',
@@ -529,7 +529,7 @@ export const uiText = {
     focus: 'Enfoque:',
     stopIfHurts: 'Para si algo duele',
     micAccessTitle: 'Acceso al micrófono para checks base',
-    micAccessBody: 'VoiceFix escucha solo durante ejercicios que tú inicias.',
+    micAccessBody: 'Rehear escucha solo durante ejercicios que tú inicias.',
   },
   pt: {
     continue: 'Continuar',
@@ -552,7 +552,7 @@ export const uiText = {
     focus: 'Foco:',
     stopIfHurts: 'Pare se doer',
     micAccessTitle: 'Acesso ao microfone para checagens base',
-    micAccessBody: 'VoiceFix escuta apenas nos exercícios que você inicia.',
+    micAccessBody: 'Rehear escuta apenas nos exercícios que você inicia.',
   },
   fr: {
     continue: 'Continuer',
@@ -575,7 +575,7 @@ export const uiText = {
     focus: 'Focus :',
     stopIfHurts: 'Arrêtez si ça fait mal',
     micAccessTitle: 'Accès micro pour les tests de base',
-    micAccessBody: 'VoiceFix écoute seulement pendant les exercices que vous lancez.',
+    micAccessBody: 'Rehear écoute seulement pendant les exercices que vous lancez.',
   },
   de: {
     continue: 'Weiter',
@@ -598,7 +598,7 @@ export const uiText = {
     focus: 'Fokus:',
     stopIfHurts: 'Stoppe, wenn etwas weh tut',
     micAccessTitle: 'Mikrofonzugriff für Basischecks',
-    micAccessBody: 'VoiceFix hört nur während Übungen zu, die du startest.',
+    micAccessBody: 'Rehear hört nur während Übungen zu, die du startest.',
   },
   ja: {
     continue: '続ける',
@@ -621,7 +621,7 @@ export const uiText = {
     focus: 'フォーカス:',
     stopIfHurts: '痛みがあれば止める',
     micAccessTitle: 'ベースライン確認のためのマイクアクセス',
-    micAccessBody: 'VoiceFix はあなたが開始した練習中だけ聞きます。',
+    micAccessBody: 'Rehear はあなたが開始した練習中だけ聞きます。',
   },
   zhHans: {
     continue: '继续',
@@ -644,7 +644,7 @@ export const uiText = {
     focus: '重点：',
     stopIfHurts: '如果疼痛就停止',
     micAccessTitle: '用于基线检查的麦克风权限',
-    micAccessBody: 'VoiceFix 只会在你开始的练习中聆听。',
+    micAccessBody: 'Rehear 只会在你开始的练习中聆听。',
   },
   zhHant: {
     continue: '繼續',
@@ -667,7 +667,7 @@ export const uiText = {
     focus: '重點：',
     stopIfHurts: '如果疼痛就停止',
     micAccessTitle: '用於基線檢查的麥克風權限',
-    micAccessBody: 'VoiceFix 只會在你開始的練習中聆聽。',
+    micAccessBody: 'Rehear 只會在你開始的練習中聆聽。',
   },
   hi: {
     continue: 'जारी रखें',
@@ -690,7 +690,7 @@ export const uiText = {
     focus: 'फोकस:',
     stopIfHurts: 'दर्द हो तो रुकें',
     micAccessTitle: 'बेसलाइन चेक के लिए माइक एक्सेस',
-    micAccessBody: 'VoiceFix केवल उन अभ्यासों में सुनता है जिन्हें आप शुरू करते हैं.',
+    micAccessBody: 'Rehear केवल उन अभ्यासों में सुनता है जिन्हें आप शुरू करते हैं.',
   },
   ar: {
     continue: 'متابعة',
@@ -713,7 +713,7 @@ export const uiText = {
     focus: 'التركيز:',
     stopIfHurts: 'توقف إذا شعرت بألم',
     micAccessTitle: 'وصول الميكروفون لفحوصات البداية',
-    micAccessBody: 'يستمع VoiceFix فقط أثناء التمارين التي تبدأها أنت.',
+    micAccessBody: 'يستمع Rehear فقط أثناء التمارين التي تبدأها أنت.',
   },
   id: {
     continue: 'Lanjut',
@@ -736,7 +736,7 @@ export const uiText = {
     focus: 'Fokus:',
     stopIfHurts: 'Berhenti jika terasa sakit',
     micAccessTitle: 'Akses mikrofon untuk cek dasar',
-    micAccessBody: 'VoiceFix hanya mendengarkan selama latihan yang kamu mulai.',
+    micAccessBody: 'Rehear hanya mendengarkan selama latihan yang kamu mulai.',
   },
 } satisfies Record<Language, Record<string, string>>;
 
@@ -855,7 +855,7 @@ export function localizePlan(plan: StarterPlan, language: Language): StarterPlan
       reason: '아직 하나의 신호가 지배적이지 않아 호흡, 음정, 조율을 조금씩 확인합니다.',
       firstSession: '12분 기초 믹스',
       drills: ['고른 히스', '한 음 맞추기', '세 음 에코'],
-      cue: 'VoiceFix가 이전 테이크와 비교할 수 있도록 같은 작은 과제를 한 번 다시 해보세요.',
+      cue: 'Rehear가 이전 테이크와 비교할 수 있도록 같은 작은 과제를 한 번 다시 해보세요.',
       planDays: [
         { range: '1-3일', title: '기초 샘플링', detail: '호흡, 음정, 에코를 하나씩 시도합니다.' },
         { range: '4-9일', title: '걸리는 지점 찾기', detail: '반복 테이크가 가장 강한 패턴을 드러내게 합니다.' },

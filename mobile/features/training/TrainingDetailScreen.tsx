@@ -6,7 +6,7 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { CloseIconButton, headerIconButtonStyles } from "@/constants/headerButtons";
-import { VoiceFixTheme as theme } from "@/constants/theme";
+import { RehearTheme as theme } from "@/constants/theme";
 import {
   CardGradientBackground,
   type CardGradientVariant,

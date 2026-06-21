@@ -1,12 +1,12 @@
-# VoiceFix - Persona-Based 6-Month Training Journeys
+# Rehear - Persona-Based 6-Month Training Journeys
 
-This document describes how VoiceFix trains different beginner personas across months, weeks, and daily sessions.
+This document describes how Rehear trains different beginner personas across months, weeks, and daily sessions.
 
 The product direction is now:
 
-> VoiceFix is a 6-month daily vocal training journey that helps beginners build the breath, resonance, control, confidence, and song skills needed to sing comfortably, using short recordings and repeatable feedback every day.
+> Rehear is a 6-month daily vocal training journey that helps beginners build the breath, resonance, control, confidence, and song skills needed to sing comfortably, using short recordings and repeatable feedback every day.
 
-The app should still preserve the original VoiceFix strength: every training day uses a tight loop of **guided exercise -> record -> feedback -> one fix -> retry -> compare to yourself**.
+The app should still preserve the original Rehear strength: every training day uses a tight loop of **guided exercise -> record -> feedback -> one fix -> retry -> compare to yourself**.
 
 ---
 
@@ -44,7 +44,7 @@ Most sessions should take 5-15 minutes. Longer users can receive extra repetitio
 
 ## 3. Core Personas
 
-VoiceFix should train at least six beginner personas differently.
+Rehear should train at least six beginner personas differently.
 
 | Persona | Main Problem | Emotional Risk | Default Start |
 |---|---|---|---|
@@ -61,11 +61,11 @@ VoiceFix should train at least six beginner personas differently.
 
 ### Profile
 
-Asha's voice fades at the end of notes. Sustained sounds become shaky, quiet, or flat. She may think she "has no breath support," but VoiceFix should avoid overclaiming and instead say: "Your endings often lose steadiness."
+Asha's voice fades at the end of notes. Sustained sounds become shaky, quiet, or flat. She may think she "has no breath support," but Rehear should avoid overclaiming and instead say: "Your endings often lose steadiness."
 
 ### Month-by-Month Training
 
-| Month | Focus | What VoiceFix Trains | What Progress Looks Like |
+| Month | Focus | What Rehear Trains | What Progress Looks Like |
 |---:|---|---|---|
 | 0-1 | Steady airflow and endings | Hiss, soft hum, sustained ah, small volume control | Endings fade less; user can hold simple sounds calmly |
 | 1-2 | Pitch on stable air | Single pitch match after airflow warm-up | Pitch holds better when volume stays steady |
@@ -100,11 +100,11 @@ Asha's voice fades at the end of notes. Sustained sounds become shaky, quiet, or
 
 ### Profile
 
-Jordan struggles to find the right note. Breath may be acceptable, but target matching is unreliable. This user may believe they are "tone deaf," so VoiceFix must be precise and encouraging.
+Jordan struggles to find the right note. Breath may be acceptable, but target matching is unreliable. This user may believe they are "tone deaf," so Rehear must be precise and encouraging.
 
 ### Month-by-Month Training
 
-| Month | Focus | What VoiceFix Trains | What Progress Looks Like |
+| Month | Focus | What Rehear Trains | What Progress Looks Like |
 |---:|---|---|---|
 | 0-1 | Pitch readiness | Gentle hum, one-note matching, stable onset | User learns to approach notes without panic |
 | 1-2 | Single-note accuracy | Reference tone -> hum -> ah | Faster target finding |
@@ -143,7 +143,7 @@ Riley can sing some easy notes but pushes when the range rises. The app must pri
 
 ### Month-by-Month Training
 
-| Month | Focus | What VoiceFix Trains | What Progress Looks Like |
+| Month | Focus | What Rehear Trains | What Progress Looks Like |
 |---:|---|---|---|
 | 0-1 | Comfort and release | Hums, lip trills, mid-range slides, stop-if-pain checks | User learns easy sound before range |
 | 1-2 | Smooth movement | Small steps in comfortable range | Less cracking on tiny intervals |
@@ -182,7 +182,7 @@ Sam has no single dominant issue. Air, pitch, timing, and confidence are all som
 
 ### Month-by-Month Training
 
-| Month | Focus | What VoiceFix Trains | What Progress Looks Like |
+| Month | Focus | What Rehear Trains | What Progress Looks Like |
 |---:|---|---|---|
 | 0-1 | Foundation sampling | Air, hum, one pitch, basic recording habit | App identifies strongest weak point |
 | 1-2 | Primary weakness | More sessions tilt toward air, pitch, or tension | User sees one clear focus |
@@ -209,7 +209,7 @@ Sam has no single dominant issue. Air, pitch, timing, and confidence are all som
 5. One fix: "Start gently, then hold."
 6. Retry: Same pitch.
 7. Apply: Three-note echo.
-8. Summary: "VoiceFix will keep watching whether pitch or air needs more attention."
+8. Summary: "Rehear will keep watching whether pitch or air needs more attention."
 
 ---
 
@@ -221,7 +221,7 @@ Morgan is embarrassed by recording, may sing too quietly, stop early, or avoid p
 
 ### Month-by-Month Training
 
-| Month | Focus | What VoiceFix Trains | What Progress Looks Like |
+| Month | Focus | What Rehear Trains | What Progress Looks Like |
 |---:|---|---|---|
 | 0-1 | Recording safety and tiny wins | Very short hums, optional playback, private clips | User completes sessions without quitting |
 | 1-2 | Gentle vocal control | Soft pitch matching and short sustains | User tolerates hearing small comparisons |
@@ -260,7 +260,7 @@ Taylor can hear mistakes but cannot make the voice obey yet. This user may get b
 
 ### Month-by-Month Training
 
-| Month | Focus | What VoiceFix Trains | What Progress Looks Like |
+| Month | Focus | What Rehear Trains | What Progress Looks Like |
 |---:|---|---|---|
 | 0-1 | Fast foundation placement | Breath and phonation checks, then accelerated path if stable | User earns faster progression |
 | 1-2 | Ear-to-voice connection | Pitch match, intervals, slow scale fragments | Execution catches up with hearing |
@@ -334,7 +334,7 @@ Monthly checkpoints should include:
 
 ## 12. Habit, Streaks, and Motivation
 
-VoiceFix should be serious about daily training, but not cruel.
+Rehear should be serious about daily training, but not cruel.
 
 ### Streak Rule
 
@@ -384,7 +384,7 @@ Notifications should include the user's current phase when possible:
 
 ## 14. Product Summary
 
-VoiceFix should train different users through the same 6-month journey, but with different emphasis:
+Rehear should train different users through the same 6-month journey, but with different emphasis:
 
 - Asha gets more airflow and ending stability.
 - Jordan gets more pitch matching and reference fading.

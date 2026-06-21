@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { VoiceFixTheme as theme } from '@/constants/theme';
+import { RehearTheme as theme } from '@/constants/theme';
 import type { AnalysisMetricItem } from '@/features/prototype/analysisMetrics';
 
 type AnalysisMetricCardProps = {

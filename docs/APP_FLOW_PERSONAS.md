@@ -1,4 +1,4 @@
-# VoiceFix — App flow by user persona (detailed)
+# Rehear — App flow by user persona (detailed)
 
 This document explains **what the user sees and does**, step by step, for **different kinds of beginners**. You do not need prior singing vocabulary; tricky words are explained in plain language.
 

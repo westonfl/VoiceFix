@@ -27,7 +27,7 @@ import {
 } from "react-native-safe-area-context";
 
 import { CloseIconButton, headerIconButtonStyles } from "@/constants/headerButtons";
-import { VoiceFixTheme as theme } from "@/constants/theme";
+import { RehearTheme as theme } from "@/constants/theme";
 import { OnboardingFlow } from "@/features/onboarding/OnboardingFlow";
 import {
   CardGradientBackground,
@@ -97,8 +97,13 @@ function orderExercises(exercises: string[], savedOrder?: string[]) {
 }
 
 export default function TodayScreen() {
-  const { state, isHydrated, completeOnboarding, reorderWeekExercise } =
-    usePrototype();
+  const {
+    state,
+    isHydrated,
+    completeOnboarding,
+    completeSession,
+    reorderWeekExercise,
+  } = usePrototype();
   const audioRecorder = useAudioRecorder(TRAINING_RECORDING_OPTIONS);
   const recorderState = useAudioRecorderState(
     audioRecorder,
@@ -122,7 +127,6 @@ export default function TodayScreen() {
   const [completedExerciseIds, setCompletedExerciseIds] = useState<string[]>(
     [],
   );
-  const [completedRecordedMs, setCompletedRecordedMs] = useState(0);
   const [selectedWeekNumber, setSelectedWeekNumber] = useState(
     state.currentWeekNumber,
   );
@@ -196,25 +200,21 @@ export default function TodayScreen() {
   );
   const pendingCompletedCount =
     currentExercisePairComplete && !currentExerciseAlreadyCompleted ? 1 : 0;
-  const dailyGoalCompleted = Math.min(
-    dailyGoalTotal,
-    completedExerciseIds.length + pendingCompletedCount,
-  );
-  const savedTodayClip = state.savedClips.find(
+  const savedTodayClips = state.savedClips.filter(
     (clip) =>
       clip.weekNumber === displayedWeek.weekNumber &&
       clip.dayNumber === selectedDayNumber,
   );
-  const currentRecordedMs = firstTake?.durationMs ?? 0;
-  const recordedPracticeMs =
-    completedRecordedMs +
-    (completedExerciseIds.includes(currentExercise?.id ?? "")
-      ? 0
-      : currentRecordedMs);
-  const displayedGoalRecordedMs = Math.max(
-    savedTodayClip?.recordedPracticeMs ?? 0,
-    recordedPracticeMs,
+  const dailyGoalCompleted = savedTodayClips.length + pendingCompletedCount;
+  const savedRecordedMs = savedTodayClips.reduce(
+    (total, clip) =>
+      total +
+      (clip.recordedPracticeMs ??
+        clip.firstDurationMs + clip.retryDurationMs),
+    0,
   );
+  const currentRecordedMs = firstTake?.durationMs ?? 0;
+  const displayedGoalRecordedMs = savedRecordedMs + currentRecordedMs;
   const allExercisesRecorded =
     dailyGoalCompleted >= dailyGoalTotal && dailyGoalTotal > 0;
   const allGoalTargetsAchieved =
@@ -259,7 +259,6 @@ export default function TodayScreen() {
   useEffect(() => {
     setActiveExerciseIndex(0);
     setCompletedExerciseIds([]);
-    setCompletedRecordedMs(0);
     setFirstTake(null);
     setFirstAnalysis(null);
     setRetryAnalysis(null);
@@ -367,13 +366,35 @@ export default function TodayScreen() {
         : [...completedExerciseIds, currentExercise.id]
       : completedExerciseIds;
 
-    if (
-      currentExercise &&
-      firstTake &&
-      !completedExerciseIds.includes(currentExercise.id)
-    ) {
-      setCompletedRecordedMs((recordedMs) => recordedMs + firstTake.durationMs);
+    if (currentExercise && firstTake) {
       setCompletedExerciseIds(completedIds);
+      const nextRecordedMs = savedRecordedMs + firstTake.durationMs;
+      const nextCompletedCount = savedTodayClips.length + 1;
+      completeSession(
+        {
+          exerciseId: currentExercise.id,
+          title: currentExercise.title,
+          firstTakeUri: firstTake.uri,
+          firstDurationMs: firstTake.durationMs,
+          retryDurationMs: 0,
+          activeTrainingMs: firstTake.durationMs,
+          recordedPracticeMs: firstTake.durationMs,
+          dailyGoalMet:
+            nextCompletedCount >= dailyGoalTotal &&
+            nextRecordedMs >= DAILY_RECORDED_TARGET_MS,
+          observation:
+            firstAnalysis?.feedback.whatWeHeard ??
+            "Recording completed and saved for your daily progress.",
+          comparison:
+            firstAnalysis?.comparison?.summary ?? "First take saved.",
+          createdAt: new Date().toISOString(),
+          analysisMetrics: firstAnalysis?.metrics,
+        },
+        {
+          weekNumber: displayedWeek.weekNumber,
+          dayNumber: selectedDayNumber,
+        },
+      );
     }
 
     const nextIncompleteIndex = todayExerciseCards.findIndex(

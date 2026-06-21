@@ -113,7 +113,7 @@ function stopActivePlayer() {
 }
 
 function writeReferenceFile(screenId: string, wavBytes: Uint8Array) {
-  const file = new File(Paths.cache, `voicefix-reference-${screenId}.wav`);
+  const file = new File(Paths.cache, `rehear-reference-${screenId}.wav`);
 
   if (file.exists) {
     file.delete();

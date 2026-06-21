@@ -9,7 +9,7 @@ export function buildStarterPlan(answers: OnboardingAnswers): StarterPlan {
   return {
     bucket: placement.safetyNote ? 'safety' : week.phase === 'foundation' ? 'air' : week.phase === 'control' ? 'pitch' : 'mixed',
     focus: `Start at Week ${week.weekNumber}: ${week.title}`,
-    reason: `${placement.reason} This is a recommended starting point inside the fixed 12-week VoiceFix journey, not a separate custom curriculum.`,
+    reason: `${placement.reason} This is a recommended starting point inside the fixed 12-week Rehear journey, not a separate custom curriculum.`,
     firstSession: `${getPhaseLabel(week.phase)} - Day 1`,
     drills: week.coreExercises.slice(0, 3),
     cue: placement.safetyNote ?? week.goal,

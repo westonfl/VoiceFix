@@ -97,7 +97,7 @@ export async function askCoach(input: {
       throw error;
     }
 
-    throw new CoachChatError("Could not reach the VoiceFix coach.", undefined, {
+    throw new CoachChatError("Could not reach the Rehear coach.", undefined, {
       url,
     });
   } finally {
@@ -203,7 +203,7 @@ export async function streamCoach(
     if (error instanceof CoachChatError) {
       throw error;
     }
-    throw new CoachChatError("Could not reach the VoiceFix coach.", undefined, {
+    throw new CoachChatError("Could not reach the Rehear coach.", undefined, {
       url,
     });
   } finally {

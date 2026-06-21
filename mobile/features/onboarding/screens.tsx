@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { VoiceFixTheme as theme } from '@/constants/theme';
+import { RehearTheme as theme } from '@/constants/theme';
 import { formatDuration } from '@/features/prototype/analysis';
 
 import { InfoList, OptionCard, Pill, ScreenHeader, SignalWave, StudioMark } from './components';
@@ -90,7 +90,7 @@ function SplashScreen({ screen }: ScreenProps) {
     <View style={[styles.center, styles.splash]}>
       <StudioMark large />
       <View style={styles.splashCopy}>
-        <Text style={styles.brand}>VoiceFix</Text>
+        <Text style={styles.brand}>Rehear</Text>
         <Text style={styles.display}>{screen.title}</Text>
         <Text style={styles.body}>{screen.body}</Text>
       </View>

@@ -1,4 +1,4 @@
-# VoiceFix - Static 6-Month Vocal Training Curriculum
+# Rehear - Static 6-Month Vocal Training Curriculum
 
 This document defines the default 6-month training plan built into the app.
 
@@ -16,7 +16,7 @@ The curriculum itself remains stable, explainable, and easy to maintain.
 
 ## Product Promise
 
-VoiceFix trains beginners through a 6-month daily vocal journey.
+Rehear trains beginners through a 6-month daily vocal journey.
 
 The goal is not to make users professional singers in six months. The realistic promise is:
 
@@ -643,7 +643,7 @@ The app should phrase this gently:
 
 ## Streak and Grace Day Rule
 
-VoiceFix should encourage daily discipline while allowing real life.
+Rehear should encourage daily discipline while allowing real life.
 
 Rules:
 
@@ -719,11 +719,11 @@ Example:
 
 ## Summary
 
-The fixed 6-month VoiceFix curriculum should be:
+The fixed 6-month Rehear curriculum should be:
 
 1. Narrow and serious in Month 1: breath and resonance only.
 2. Skill-building in Months 2-3: onset, endings, pitch, timing, short phrases.
 3. Musical in Months 4-6: song phrases, range, dynamics, expression, full takes.
 4. Flexible at the edges: users can test out, repeat, or review.
-5. Always built around the VoiceFix loop: record, observe, fix one thing, retry.
+5. Always built around the Rehear loop: record, observe, fix one thing, retry.
 

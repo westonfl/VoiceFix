@@ -26,7 +26,7 @@ export const Colors = {
   },
 };
 
-export const VoiceFixTheme = {
+export const RehearTheme = {
   background: "#FFF8F5",
   backgroundDeep: "#FFF6F0",
   surface: "#F8F1EC",

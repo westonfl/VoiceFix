@@ -1,4 +1,4 @@
-# VoiceFix - Brand and Design System
+# Rehear - Brand and Design System
 
 Source of truth for brand direction, visual language, interaction patterns, and UI tokens. This doc should guide product copy, design mockups, and implementation across the mobile app.
 
@@ -10,7 +10,7 @@ Related docs: [`PRODUCT.md`](PRODUCT.md), [`APP_SCREENS.md`](APP_SCREENS.md), [`
 
 ### 1.1 Brand idea
 
-VoiceFix is a calm practice companion that helps singers hear what changed, try one focused adjustment, and repeat the same exercise with less guesswork.
+Rehear is a calm practice companion that helps singers hear what changed, try one focused adjustment, and repeat the same exercise with less guesswork.
 
 The product should feel like a voice debugger: observe the signal, name the likely pattern, try one small fix, and rerun the same drill.
 
@@ -29,7 +29,7 @@ Use **Hear what changed.** as the default splash/onboarding tagline unless a lat
 
 ### 1.3 Brand promise
 
-VoiceFix does not promise to make someone a professional singer or replace a teacher. It promises a tighter practice loop:
+Rehear does not promise to make someone a professional singer or replace a teacher. It promises a tighter practice loop:
 
 - short guided exercises
 - plain feedback
@@ -49,7 +49,7 @@ VoiceFix does not promise to make someone a professional singer or replace a tea
 
 ### 1.5 Brand archetype
 
-VoiceFix should feel like a patient coach's notebook plus an audio lab. It is not a karaoke game, a social performance app, or a medical voice tool.
+Rehear should feel like a patient coach's notebook plus an audio lab. It is not a karaoke game, a social performance app, or a medical voice tool.
 
 ---
 
@@ -57,7 +57,7 @@ VoiceFix should feel like a patient coach's notebook plus an audio lab. It is no
 
 ### 2.1 Product name
 
-**VoiceFix**
+**Rehear**
 
 The name should read as practical relief: something sounds off, and the app helps you find a small fix to try. Do not make "fix" sound like the user is broken.
 
@@ -101,7 +101,7 @@ Avoid fear-based safety copy. The app should be clear without sounding alarming.
 
 ### 3.1 Design mood
 
-VoiceFix is **dark-first**. The visual mood should sit between a premium dark music app and a restrained cyberpunk signal interface: moody, technical, musical, and cool, without becoming a game HUD.
+Rehear is **dark-first**. The visual mood should sit between a premium dark music app and a restrained cyberpunk signal interface: moody, technical, musical, and cool, without becoming a game HUD.
 
 The target direction is **Midnight Signal Studio**:
 
@@ -176,7 +176,7 @@ Before committing the entire product to this style, design or prototype these fo
 
 The current Expo template uses placeholder teal values in `mobile/constants/theme.ts`. Replace those with the dark-first product tokens below when building the real UI.
 
-VoiceFix should default to dark mode. A light theme may exist later for accessibility or platform preference, but the brand direction is defined by the dark palette.
+Rehear should default to dark mode. A light theme may exist later for accessibility or platform preference, but the brand direction is defined by the dark palette.
 
 ### 4.1 Dark-first palette
 
@@ -621,8 +621,8 @@ The prototype should be judged on four questions:
 
 The current mobile app still contains Expo starter screens and placeholder theme values. Before visual implementation, replace:
 
-- starter teal with the dark-first VoiceFix semantic tokens
-- React logo imagery with VoiceFix logo/mark
+- starter teal with the dark-first Rehear semantic tokens
+- React logo imagery with Rehear logo/mark
 - tutorial copy with Today, Journal, Settings flows from `APP_SCREENS.md`
 - generic cards with focused practice components
 - bright template backgrounds with the Midnight Signal Studio direction
@@ -634,4 +634,4 @@ The current mobile app still contains Expo starter screens and placeholder theme
 | Date | Change |
 |------|--------|
 | 2026-05-12 | Updated visual direction to dark-first "Midnight Signal Studio": premium dark mode between music app and restrained cyberpunk. |
-| 2026-05-12 | Initial brand and design system guide for VoiceFix. |
+| 2026-05-12 | Initial brand and design system guide for Rehear. |
