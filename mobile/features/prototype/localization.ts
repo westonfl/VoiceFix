@@ -133,6 +133,7 @@ const baseMainAppText = {
       testingCenterTitle: "Month {month} testing center",
       monthlyCheckpoint: "Monthly checkpoint",
       monthlyCheckpointPassed: "Monthly checkpoint · passed",
+      completeCurrentWeek: "Complete your current week to unlock this plan.",
     },
     testing: {
       micUnavailableTitle: "Microphone unavailable",
@@ -349,6 +350,7 @@ const baseMainAppText = {
       testingCenterTitle: "{month}개월 테스트 센터",
       monthlyCheckpoint: "월간 체크포인트",
       monthlyCheckpointPassed: "월간 체크포인트 · 통과",
+      completeCurrentWeek: "현재 주차를 완료하면 이 계획이 열립니다.",
     },
     testing: {
       micUnavailableTitle: "마이크를 사용할 수 없습니다",

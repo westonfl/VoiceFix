@@ -23,6 +23,7 @@ type TrainingResultsScreenProps = {
   text: (typeof mainAppText)['en'];
   language: MainAppLanguage;
   exerciseTitle?: string;
+  canFinish: boolean;
   onRedo: () => void;
   onDone: () => void;
 };
@@ -123,6 +124,7 @@ export function TrainingResultsScreen({
   text,
   language,
   exerciseTitle,
+  canFinish,
   onRedo,
   onDone,
 }: TrainingResultsScreenProps) {
@@ -235,13 +237,15 @@ export function TrainingResultsScreen({
         >
           <Text style={styles.actionLabel}>{text.journal.retry}</Text>
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          onPress={onDone}
-          style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
-        >
-          <Text style={styles.actionLabel}>{text.today.done}</Text>
-        </Pressable>
+        {canFinish ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={onDone}
+            style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
+          >
+            <Text style={styles.actionLabel}>{text.today.done}</Text>
+          </Pressable>
+        ) : null}
       </Animated.View>
     </View>
   );

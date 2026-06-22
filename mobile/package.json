@@ -25,6 +25,7 @@
     "expo-audio": "~1.1.1",
     "expo-constants": "~18.0.13",
     "expo-document-picker": "~14.0.8",
+    "expo-file-system": "~19.0.22",
     "expo-font": "~14.0.11",
     "expo-haptics": "~15.0.8",
     "expo-image": "~3.0.11",
@@ -56,6 +57,13 @@
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "@babel/core": "7.29.7",
+    "shell-quote": "1.8.4",
+    "tar": "7.5.16",
+    "undici": "6.27.0",
+    "ws": "8.21.0"
   },
   "private": true
 }

@@ -6,6 +6,8 @@ FastAPI service for Month 1 breath and resonance analysis. The engine uses signa
 
 ```bash
 export NVIDIA_API_KEY=your_nvidia_api_key
+export REHEAR_API_KEY=a_long_random_value
+export ALLOWED_ORIGINS=https://your-web-app.example
 uv sync
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -20,6 +22,11 @@ timeout fallback. Override them with `NVIDIA_CHAT_MODEL` and
 the NVIDIA token stream as server-sent events containing `delta`, `done`, or
 `error` payloads and flushes the connection immediately.
 Keep `NVIDIA_API_KEY` only on the server; do not put it in Expo `.env` files.
+Set `REHEAR_API_KEY` to require `X-Rehear-API-Key` on API requests, and put the
+same value in the mobile app's `EXPO_PUBLIC_REHEAR_API_KEY`. This protects
+against casual abuse; use per-user authentication or platform attestation for
+strong abuse prevention. `RATE_LIMIT_PER_MINUTE` defaults to 60 and
+`MAX_AUDIO_BYTES` defaults to 10 MB.
 
 ## Test
 

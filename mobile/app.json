@@ -11,13 +11,17 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.ov92.Rehear",
+      "buildNumber": "1",
       "appleTeamId": "X79VZ448P2",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSMicrophoneUsageDescription": "Allow Rehear to record short practice takes for private feedback and retry comparison.",
         "NSUserNotificationsUsageDescription": "Rehear sends a daily reminder at your chosen training time."
       }
     },
     "android": {
+      "package": "com.ov92.rehear",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#07111F",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
@@ -65,6 +69,9 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }

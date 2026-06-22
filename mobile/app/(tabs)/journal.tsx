@@ -593,7 +593,7 @@ function toImperativePhrase(description: string): string {
 }
 
 function roundedPolygonPath(
-  vertices: ReadonlyArray<{ x: number; y: number }>,
+  vertices: readonly { x: number; y: number }[],
   cornerRadius: number,
 ): string {
   const count = vertices.length;

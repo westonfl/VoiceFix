@@ -1,4 +1,4 @@
-import { getAnalysisServerUrl } from '@/constants/env';
+import { getAnalysisServerUrl, getApiHeaders } from '@/constants/env';
 
 import type { MainAppLanguage } from './localization';
 
@@ -153,6 +153,7 @@ export async function analyzeMonthOneTake(input: AnalyzeTakeInput): Promise<Mont
     try {
       const response = await fetch(url, {
         method: 'POST',
+        headers: getApiHeaders(),
         body: buildAnalysisFormData(input),
         signal: controller.signal,
       });

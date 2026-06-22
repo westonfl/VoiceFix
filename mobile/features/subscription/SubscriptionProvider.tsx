@@ -11,8 +11,10 @@ import {
 import { Platform } from 'react-native';
 import Purchases, {
   LOG_LEVEL,
+  PURCHASES_ERROR_CODE,
   type CustomerInfo,
   type PurchasesOffering,
+  type PurchasesPackage,
 } from 'react-native-purchases';
 import RevenueCatUI from 'react-native-purchases-ui';
 
@@ -35,6 +37,7 @@ type SubscriptionContextValue = {
   entitlementId: string;
   refresh: () => Promise<void>;
   restore: () => Promise<boolean>;
+  purchase: (selectedPackage: PurchasesPackage) => Promise<'purchased' | 'cancelled'>;
   openCustomerCenter: () => Promise<void>;
   syncCustomerInfo: (customerInfo: CustomerInfo) => void;
 };
@@ -109,8 +112,8 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         return;
       }
 
-      if (!currentOffering) {
-        setError('No current RevenueCat offering is configured.');
+      if (!currentOffering || currentOffering.availablePackages.length === 0) {
+        setError('The current RevenueCat offering has no available packages.');
         setStatus('error');
         return;
       }
@@ -194,6 +197,39 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     }
   }, [apiKey, loadAccess, syncCustomerInfo]);
 
+  const purchase = useCallback(
+    async (selectedPackage: PurchasesPackage) => {
+      if (!apiKey) {
+        throw new Error('RevenueCat is not configured for this platform.');
+      }
+
+      await ensureConfigured(apiKey);
+
+      try {
+        const { customerInfo } = await Purchases.purchasePackage(selectedPackage);
+        syncCustomerInfo(customerInfo);
+
+        if (!hasEntitlement(customerInfo)) {
+          throw new Error('The purchase completed, but access is not active yet.');
+        }
+
+        return 'purchased' as const;
+      } catch (purchaseError) {
+        if (
+          typeof purchaseError === 'object' &&
+          purchaseError !== null &&
+          'code' in purchaseError &&
+          purchaseError.code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR
+        ) {
+          return 'cancelled' as const;
+        }
+
+        throw purchaseError;
+      }
+    },
+    [apiKey, syncCustomerInfo],
+  );
+
   const openCustomerCenter = useCallback(async () => {
     if (!apiKey) {
       throw new Error('RevenueCat is not configured for this platform.');
@@ -212,6 +248,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       entitlementId: REVENUECAT_ENTITLEMENT_ID,
       refresh: loadAccess,
       restore,
+      purchase,
       openCustomerCenter,
       syncCustomerInfo,
     }),
@@ -220,6 +257,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       loadAccess,
       offering,
       openCustomerCenter,
+      purchase,
       restore,
       status,
       syncCustomerInfo,

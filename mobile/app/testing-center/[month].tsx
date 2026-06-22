@@ -36,7 +36,11 @@ import {
   type MonthOneAnalysisResponse,
   type MonthOneDrillId,
 } from "@/features/prototype/serverAnalysis";
-import { isMonthlyTestPassed, usePrototype } from "@/features/prototype/state";
+import {
+  isMonthOneTrainingComplete,
+  isMonthlyTestPassed,
+  usePrototype,
+} from "@/features/prototype/state";
 
 type MonthOneTestCheck = {
   id: string;
@@ -114,6 +118,7 @@ export default function TestingCenterScreen() {
   const [analyzingCheckId, setAnalyzingCheckId] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, CheckResult>>({});
   const isMonthOne = targetMonth === 1;
+  const trainingComplete = isMonthOneTrainingComplete(state);
   const monthTestPassed = isMonthlyTestPassed(state.monthlyTests, targetMonth);
   const allChecksPassed = monthOneChecks.every(
     (check) => results[check.id]?.passed,
@@ -126,6 +131,10 @@ export default function TestingCenterScreen() {
       : `Month ${targetMonth} Testing Center`;
 
   useEffect(() => {
+    if (!isMonthOne || !trainingComplete) {
+      return;
+    }
+
     async function prepareAudio() {
       const status = await AudioModule.requestRecordingPermissionsAsync();
       if (!status.granted) {
@@ -142,7 +151,7 @@ export default function TestingCenterScreen() {
     prepareAudio().catch(() => {
       setPermissionDenied(true);
     });
-  }, []);
+  }, [isMonthOne, trainingComplete]);
 
   const completedCount = useMemo(
     () => monthOneChecks.filter((check) => results[check.id]?.passed).length,
@@ -253,6 +262,41 @@ export default function TestingCenterScreen() {
     completeMonthlyTest(
       targetMonth,
       monthOneChecks.map((check) => check.id),
+    );
+  }
+
+  if (isMonthOne && !trainingComplete) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.content}>
+          <View style={styles.topBar}>
+            <IconButton
+              label={state.language === "ko" ? "뒤로" : "Back"}
+              name="arrow-back"
+              onPress={() => router.back()}
+            />
+            <Text style={styles.kicker}>
+              {state.language === "ko" ? "잠김" : "Locked"}
+            </Text>
+          </View>
+          <View style={styles.header}>
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.body}>
+              {state.language === "ko"
+                ? "4주차 7일 훈련을 마치면 1개월 테스트 센터가 열립니다."
+                : "Complete Week 4, Day 7 to unlock the Month 1 Testing Center."}
+            </Text>
+          </View>
+          <View style={styles.panel}>
+            <MaterialIcons name="lock" size={26} color={theme.textMuted} />
+            <Text style={styles.panelTitle}>
+              {state.language === "ko"
+                ? "먼저 1개월 훈련을 완료하세요"
+                : "Finish Month 1 training first"}
+            </Text>
+          </View>
+        </View>
+      </SafeAreaView>
     );
   }
 

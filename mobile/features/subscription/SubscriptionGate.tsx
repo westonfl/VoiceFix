@@ -9,12 +9,12 @@ import {
   Text,
   View,
 } from 'react-native';
-import RevenueCatUI from 'react-native-purchases-ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RehearTheme as theme } from '@/constants/theme';
 import { usePrototype } from '@/features/prototype/state';
 
+import { CustomPaywall } from './CustomPaywall';
 import { useSubscription } from './SubscriptionProvider';
 
 export function SubscriptionGate({ children }: PropsWithChildren) {
@@ -26,7 +26,6 @@ export function SubscriptionGate({ children }: PropsWithChildren) {
     error,
     refresh,
     restore,
-    syncCustomerInfo,
   } = useSubscription();
   const [restoring, setRestoring] = useState(false);
 
@@ -87,19 +86,7 @@ export function SubscriptionGate({ children }: PropsWithChildren) {
     );
   }
 
-  return (
-    <View style={styles.paywall}>
-      <RevenueCatUI.Paywall
-        style={styles.paywall}
-        options={{ offering, displayCloseButton: false }}
-        onPurchaseCompleted={({ customerInfo }) =>
-          syncCustomerInfo(customerInfo)
-        }
-        onRestoreCompleted={({ customerInfo }) => syncCustomerInfo(customerInfo)}
-        onDismiss={refresh}
-      />
-    </View>
-  );
+  return <CustomPaywall offering={offering} />;
 }
 
 type AccessShellProps = {
@@ -174,9 +161,6 @@ function AccessShell({
 }
 
 const styles = StyleSheet.create({
-  paywall: {
-    flex: 1,
-  },
   safeArea: {
     flex: 1,
     backgroundColor: theme.background,

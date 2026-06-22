@@ -65,9 +65,24 @@ npm run ios:device:release
 ```
 
 RevenueCat runs in Preview API mode inside Expo Go. Use a development build or
-release build to test real StoreKit / Google Play purchases. The app presents
-the current RevenueCat offering as a hard paywall immediately after onboarding;
-configure that offering and its paywall in the RevenueCat dashboard.
+release build to test real StoreKit / Google Play purchases. The app renders its
+own hard paywall immediately after onboarding, using the products and localized
+prices from RevenueCat's current offering. No RevenueCat-hosted paywall is shown.
+
+## Release builds
+
+Link the Expo project when prompted, and keep production environment values in
+EAS rather than committing `.env`:
+
+```bash
+eas build --profile preview --platform ios
+eas build --profile production --platform all
+eas submit --profile production --platform ios
+```
+
+Before a production build, set `EXPO_PUBLIC_ANALYSIS_SERVER_URL`,
+`EXPO_PUBLIC_REHEAR_API_KEY`, both RevenueCat SDK keys, and the entitlement ID
+for the build profile. Production must use an HTTPS analysis server.
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 

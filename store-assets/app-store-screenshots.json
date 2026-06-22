@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 2,
+  "appName": "Rehear",
+  "themeId": "rehear-studio",
+  "connectedCanvas": false,
+  "locales": [
+    "en"
+  ],
+  "locale": "en",
+  "device": "iphone",
+  "orientation": "portrait",
+  "appIcon": "/app-icon.png",
+  "slidesByDevice": {
+    "iphone": [
+      {
+        "id": "rehear-01-hero",
+        "layout": "hero",
+        "label": {
+          "en": "REHEAR"
+        },
+        "headline": {
+          "en": "Hear what\nchanged."
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/01-today.png"
+      },
+      {
+        "id": "rehear-02-practice",
+        "layout": "device-bottom",
+        "label": {
+          "en": "YOUR DAILY PLAN"
+        },
+        "headline": {
+          "en": "Know what\nto practice."
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/02-exercise.png"
+      },
+      {
+        "id": "rehear-03-feedback",
+        "layout": "device-top",
+        "label": {
+          "en": "PLAIN FEEDBACK"
+        },
+        "headline": {
+          "en": "One clear thing\nto try."
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/03-feedback.png",
+        "inverted": true
+      },
+      {
+        "id": "rehear-04-journey",
+        "layout": "two-devices",
+        "label": {
+          "en": "A PLAN THAT GROWS"
+        },
+        "headline": {
+          "en": "Build your voice\nweekly."
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/04-journey.png",
+        "screenshotSecondary": "/screenshots/apple/iphone/{locale}/01-today.png"
+      },
+      {
+        "id": "rehear-05-coach",
+        "layout": "device-bottom",
+        "label": {
+          "en": "REHEAR COACH"
+        },
+        "headline": {
+          "en": "Ask when\nyou’re stuck."
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/05-coach.png"
+      },
+      {
+        "id": "rehear-06-progress",
+        "layout": "device-top",
+        "label": {
+          "en": "YOUR MOMENTUM"
+        },
+        "headline": {
+          "en": "Make progress\nfeel real."
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/06-milestones.png",
+        "inverted": true
+      }
+    ],
+    "android": [],
+    "ipad": [],
+    "android-7": [],
+    "android-10": [],
+    "feature-graphic": []
+  }
+}

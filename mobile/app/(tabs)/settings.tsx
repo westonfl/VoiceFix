@@ -3,7 +3,6 @@ import DateTimePicker, {
   type DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
-import * as DocumentPicker from "expo-document-picker";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState, type ComponentProps } from "react";
 import {
@@ -25,11 +24,6 @@ import {
   mainAppText,
   type MainAppLanguage,
 } from "@/features/prototype/localization";
-import {
-  AnalysisServerError,
-  analyzeMonthOneTake,
-  type MonthOneAnalysisResponse,
-} from "@/features/prototype/serverAnalysis";
 import {
   readMicPermissionStatus,
   readNotificationPermissionStatus,
@@ -54,47 +48,6 @@ export default function SettingsScreen() {
   const selectedLanguage =
     mainAppLanguageOptions.find((option) => option.id === state.language) ??
     mainAppLanguageOptions[0];
-
-  async function analyzePickedAudioFile() {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        copyToCacheDirectory: true,
-        type: ["audio/*"],
-      });
-
-      if (result.canceled || !result.assets[0]) {
-        return;
-      }
-
-      const analysis: MonthOneAnalysisResponse = await analyzeMonthOneTake({
-        uri: result.assets[0].uri,
-        drillId: "fah_vah_resonance",
-        language: state.language,
-        takeKind: "first",
-      });
-
-      Alert.alert(
-        text.settings.analyzeAudioTitle,
-        [
-          `${analysis.drillId} · ${analysis.quality}`,
-          `resonance ${formatDebugMetric(analysis.metrics.resonanceScore)} · forward ${formatDebugMetric(analysis.metrics.forwardEnergyRatio)} · throat ${formatDebugMetric(analysis.metrics.throatEnergyRatio)}`,
-          analysis.feedback.whatWeHeard,
-          analysis.feedback.oneThingToTry,
-        ]
-          .filter(Boolean)
-          .join("\n\n"),
-      );
-    } catch (error) {
-      const detail =
-        error instanceof AnalysisServerError
-          ? `\n\n${error.message}\n${JSON.stringify(error.detail, null, 2).slice(0, 700)}`
-          : "";
-      Alert.alert(
-        text.settings.analyzeAudioFailedTitle,
-        `${text.settings.analyzeAudioFailedBody}${detail}`,
-      );
-    }
-  }
 
   async function manageSubscription() {
     try {
@@ -234,25 +187,38 @@ export default function SettingsScreen() {
             }}
           />
           <SettingRow
-            icon="upload-file"
-            label={text.settings.analyzeAudioFile}
-            value={text.settings.analyzeAudioFileValue}
-            onPress={analyzePickedAudioFile}
+            icon="policy"
+            label="Privacy, terms & safety"
+            value="How Rehear handles your data"
+            onPress={() => router.push("/legal")}
           />
         </View>
 
         <Pressable
           accessibilityRole="button"
-          onPress={() => {
-            resetPrototype();
-            router.replace("/");
-          }}
+          onPress={() =>
+            Alert.alert(
+              "Delete local data?",
+              "This permanently removes your progress and saved recordings from this device. Your store subscription is not cancelled.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: () => {
+                    resetPrototype();
+                    router.replace("/");
+                  },
+                },
+              ],
+            )
+          }
           style={({ pressed }) => [
             styles.resetButton,
             pressed && styles.resetPressed,
           ]}
         >
-          <Text style={styles.resetText}>{text.settings.deleteAccount}</Text>
+          <Text style={styles.resetText}>Delete local data</Text>
           <MaterialIcons name="delete-outline" size={20} color={theme.caution} />
         </Pressable>
       </ScrollView>
@@ -447,10 +413,6 @@ function LanguageDropdown({
       ) : null}
     </View>
   );
-}
-
-function formatDebugMetric(value: number | undefined) {
-  return typeof value === "number" ? value.toFixed(2) : "n/a";
 }
 
 function parseTrainingTime(value: string) {

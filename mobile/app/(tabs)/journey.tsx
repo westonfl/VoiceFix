@@ -18,6 +18,7 @@ import {
   mainAppText,
 } from "@/features/prototype/localization";
 import {
+  isMonthOneTrainingComplete,
   isMonthlyTestPassed,
   usePrototype,
 } from "@/features/prototype/state";
@@ -28,6 +29,7 @@ const phases: CurriculumPhase[] = ["foundation", "control", "songs"];
 export default function JourneyScreen() {
   const { state } = usePrototype();
   const text = mainAppText[state.language];
+  const monthOneTrainingComplete = isMonthOneTrainingComplete(state);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -104,6 +106,7 @@ export default function JourneyScreen() {
                   const isReview = week.weekNumber < state.currentWeekNumber;
                   const isNext =
                     week.weekNumber === state.currentWeekNumber + 1;
+                  const isLocked = week.weekNumber > state.currentWeekNumber;
                   const stateLabel = isReview
                     ? text.journey.review
                     : isCurrent
@@ -119,6 +122,7 @@ export default function JourneyScreen() {
                       title={weekDisplay.title}
                       stateLabel={stateLabel}
                       isCurrent={isCurrent}
+                      isLocked={isLocked}
                       showDivider={index < weeks.length - 1}
                       text={text}
                       weekLabel={`${text.common.week} ${week.weekNumber}`}
@@ -130,6 +134,7 @@ export default function JourneyScreen() {
                   month={1}
                   text={text}
                   passed={testPassed}
+                  unlocked={monthOneTrainingComplete}
                 />
               </View>
             </View>
@@ -145,6 +150,7 @@ function WeekListRow({
   title,
   stateLabel,
   isCurrent,
+  isLocked,
   showDivider,
   text,
   weekLabel,
@@ -154,6 +160,7 @@ function WeekListRow({
   title: string;
   stateLabel: string | null;
   isCurrent: boolean;
+  isLocked: boolean;
   showDivider: boolean;
   text: (typeof mainAppText)["en"];
   weekLabel: string;
@@ -161,14 +168,19 @@ function WeekListRow({
 }) {
   return (
     <Pressable
-      accessibilityHint={text.journey.openWeekPlan}
+      accessibilityHint={
+        isLocked ? text.journey.locked : text.journey.openWeekPlan
+      }
       accessibilityLabel={`${weekLabel}: ${title}`}
       accessibilityRole="button"
+      accessibilityState={{ disabled: isLocked }}
+      disabled={isLocked}
       onPress={onPress}
       style={({ pressed }) => [
         styles.weekRow,
         isCurrent && styles.weekRowCurrent,
-        pressed && styles.weekRowPressed,
+        isLocked && styles.weekRowLocked,
+        pressed && !isLocked && styles.weekRowPressed,
       ]}
     >
       <View style={[styles.weekBadge, isCurrent && styles.weekBadgeCurrent]}>
@@ -194,7 +206,11 @@ function WeekListRow({
           {stateLabel ? `${weekLabel} · ${stateLabel}` : weekLabel}
         </Text>
       </View>
-      <MaterialIcons name="chevron-right" size={20} color={theme.textSubtle} />
+      <MaterialIcons
+        name={isLocked ? "lock-outline" : "chevron-right"}
+        size={20}
+        color={theme.textSubtle}
+      />
       {showDivider ? <View style={styles.weekRowDivider} /> : null}
     </Pressable>
   );
@@ -204,16 +220,21 @@ function TestingCenterRow({
   month,
   text,
   passed = false,
+  unlocked,
 }: {
   month: number;
   text: (typeof mainAppText)["en"];
   passed?: boolean;
+  unlocked: boolean;
 }) {
   const title = fillTemplate(text.journey.testingCenterTitle, { month });
 
   return (
     <Pressable
+      accessibilityLabel={`${title}: ${unlocked ? text.journey.monthlyCheckpoint : text.journey.locked}`}
       accessibilityRole="button"
+      accessibilityState={{ disabled: !unlocked }}
+      disabled={!unlocked}
       onPress={() =>
         router.push({
           pathname: "/testing-center/[month]",
@@ -223,7 +244,8 @@ function TestingCenterRow({
       style={({ pressed }) => [
         styles.weekRow,
         styles.testingRow,
-        pressed && styles.weekRowPressed,
+        !unlocked && styles.testingRowLocked,
+        pressed && unlocked && styles.weekRowPressed,
       ]}
     >
       <View
@@ -233,7 +255,7 @@ function TestingCenterRow({
         ]}
       >
         <MaterialIcons
-          name={passed ? "check" : "science"}
+          name={passed ? "check" : unlocked ? "science" : "lock"}
           size={passed ? 20 : 18}
           color={passed ? theme.background : theme.primaryBright}
         />
@@ -243,10 +265,16 @@ function TestingCenterRow({
         <Text style={styles.weekRowMeta}>
           {passed
             ? text.journey.monthlyCheckpointPassed
-            : text.journey.monthlyCheckpoint}
+            : unlocked
+              ? text.journey.monthlyCheckpoint
+              : text.journey.locked}
         </Text>
       </View>
-      <MaterialIcons name="chevron-right" size={20} color={theme.textSubtle} />
+      <MaterialIcons
+        name={unlocked ? "chevron-right" : "lock-outline"}
+        size={20}
+        color={theme.textSubtle}
+      />
     </Pressable>
   );
 }
@@ -326,6 +354,9 @@ const styles = StyleSheet.create({
   weekRowCurrent: {
     backgroundColor: "rgba(0, 0, 0, 0.04)",
   },
+  weekRowLocked: {
+    opacity: 0.5,
+  },
   weekRowPressed: {
     backgroundColor: theme.surfacePressed,
   },
@@ -386,6 +417,9 @@ const styles = StyleSheet.create({
   testingRow: {
     borderTopColor: "rgba(0, 0, 0, 0.08)",
     borderTopWidth: 1,
+  },
+  testingRowLocked: {
+    opacity: 0.5,
   },
   comingSoonCard: {
     alignItems: "center",

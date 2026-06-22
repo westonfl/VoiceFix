@@ -13,6 +13,7 @@ import type { ComponentProps } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  AppState,
   Modal,
   Pressable,
   ScrollView,
@@ -34,10 +35,7 @@ import {
   SignalWave,
   type CardGradientVariant,
 } from "@/features/onboarding/components";
-import { analysisMetricItems, metricGuideTitle } from "@/features/prototype/analysisMetrics";
-import { AnalysisMetricCard } from "@/features/training/AnalysisMetricCard";
 import {
-  curriculum,
   getExerciseById,
   getWeek,
   type CurriculumExercise,
@@ -55,7 +53,6 @@ import {
 import { usePrototype } from "@/features/prototype/state";
 import type { LiveMeterSample } from "@/features/training/liveAnalysis";
 import { TrainingAnalyzingScreen } from "@/features/training/TrainingAnalyzingScreen";
-import { LoadingDots } from "@/features/training/LoadingDots";
 import { TrainingDetailScreen } from "@/features/training/TrainingDetailScreen";
 import { TrainingLiveSession } from "@/features/training/TrainingLiveSession";
 import { TrainingResultsScreen } from "@/features/training/TrainingResultsScreen";
@@ -84,7 +81,7 @@ type TodayExerciseCard = {
   gradient: CardGradientVariant;
 };
 
-const DAILY_RECORDED_TARGET_MS = 10 * 60 * 1000;
+const DAILY_TRAINING_TARGET_MS = 10 * 60 * 1000;
 const SPACE = 5;
 
 function orderExercises(exercises: string[], savedOrder?: string[]) {
@@ -114,6 +111,8 @@ export default function TodayScreen() {
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [firstTake, setFirstTake] = useState<RecordedTake | null>(null);
+  const [retryTake, setRetryTake] = useState<RecordedTake | null>(null);
+  const [recordingRetry, setRecordingRetry] = useState(false);
   const [liveSessionKey, setLiveSessionKey] = useState(0);
   const [firstAnalysis, setFirstAnalysis] =
     useState<MonthOneAnalysisResponse | null>(null);
@@ -127,23 +126,18 @@ export default function TodayScreen() {
   const [completedExerciseIds, setCompletedExerciseIds] = useState<string[]>(
     [],
   );
-  const [selectedWeekNumber, setSelectedWeekNumber] = useState(
-    state.currentWeekNumber,
-  );
-  const [selectedDayNumber, setSelectedDayNumber] = useState(
-    state.currentDayNumber,
-  );
+  const [sessionElapsedMs, setSessionElapsedMs] = useState(0);
+  const activeSessionSegmentStartedAtRef = useRef<number | null>(null);
+  const accumulatedSessionMsRef = useRef(0);
+  const creditedSessionMsRef = useRef(0);
   const goalFade = useRef(new Animated.Value(0)).current;
-  const displayedWeek = getWeek(selectedWeekNumber);
+  const displayedWeek = getWeek(state.currentWeekNumber);
   const todaySession =
-    displayedWeek.dailySessions[selectedDayNumber - 1] ??
+    displayedWeek.dailySessions[state.currentDayNumber - 1] ??
     displayedWeek.dailySessions[0];
   const text = mainAppText[state.language];
   const forYouTitle = text.today.forYouTitle;
   const forYouSubtitle = text.today.forYouSubtitle;
-  const selectableWeeks = curriculum.filter(
-    (week) => week.exercises.length > 0,
-  );
   const orderedExerciseIds = orderExercises(
     displayedWeek.exercises.map((exercise) => exercise.id),
     state.exerciseOrdersByWeek[`${displayedWeek.weekNumber}`],
@@ -194,7 +188,7 @@ export default function TodayScreen() {
   const currentExercise =
     todayExerciseCards[activeExerciseIndex] ?? todayExerciseCards[0];
   const dailyGoalTotal = todayExerciseCards.length;
-  const currentExercisePairComplete = Boolean(firstTake);
+  const currentExercisePairComplete = Boolean(firstTake && retryTake);
   const currentExerciseAlreadyCompleted = completedExerciseIds.includes(
     currentExercise?.id ?? "",
   );
@@ -203,22 +197,25 @@ export default function TodayScreen() {
   const savedTodayClips = state.savedClips.filter(
     (clip) =>
       clip.weekNumber === displayedWeek.weekNumber &&
-      clip.dayNumber === selectedDayNumber,
+      clip.dayNumber === state.currentDayNumber,
   );
-  const dailyGoalCompleted = savedTodayClips.length + pendingCompletedCount;
-  const savedRecordedMs = savedTodayClips.reduce(
-    (total, clip) =>
-      total +
-      (clip.recordedPracticeMs ??
-        clip.firstDurationMs + clip.retryDurationMs),
+  const dailyGoalCompleted = Math.min(
+    dailyGoalTotal,
+    savedTodayClips.length + pendingCompletedCount,
+  );
+  const savedActiveTrainingMs = savedTodayClips.reduce(
+    (total, clip) => total + (clip.activeTrainingMs ?? 0),
     0,
   );
-  const currentRecordedMs = firstTake?.durationMs ?? 0;
-  const displayedGoalRecordedMs = savedRecordedMs + currentRecordedMs;
+  const uncreditedSessionMs = Math.max(
+    0,
+    sessionElapsedMs - creditedSessionMsRef.current,
+  );
+  const displayedGoalActiveMs = savedActiveTrainingMs + uncreditedSessionMs;
   const allExercisesRecorded =
     dailyGoalCompleted >= dailyGoalTotal && dailyGoalTotal > 0;
   const allGoalTargetsAchieved =
-    allExercisesRecorded && displayedGoalRecordedMs >= DAILY_RECORDED_TARGET_MS;
+    allExercisesRecorded && displayedGoalActiveMs >= DAILY_TRAINING_TARGET_MS;
   const firstIncompleteExerciseIndex = todayExerciseCards.findIndex(
     (exercise) => !completedExerciseIds.includes(exercise.id),
   );
@@ -249,21 +246,47 @@ export default function TodayScreen() {
   }, [state.onboardingComplete, text.today.micSetupFailed]);
 
   useEffect(() => {
-    setSelectedWeekNumber(state.currentWeekNumber);
-  }, [state.currentWeekNumber]);
-
-  useEffect(() => {
-    setSelectedDayNumber(state.currentDayNumber);
-  }, [state.currentDayNumber]);
-
-  useEffect(() => {
     setActiveExerciseIndex(0);
     setCompletedExerciseIds([]);
     setFirstTake(null);
+    setRetryTake(null);
+    setRecordingRetry(false);
     setFirstAnalysis(null);
     setRetryAnalysis(null);
     setAnalysisSource(null);
-  }, [selectedWeekNumber, selectedDayNumber]);
+  }, [state.currentWeekNumber, state.currentDayNumber]);
+
+  useEffect(() => {
+    if (!sessionOpen) {
+      return;
+    }
+
+    const updateElapsed = () => {
+      const activeSegmentMs = activeSessionSegmentStartedAtRef.current
+        ? Date.now() - activeSessionSegmentStartedAtRef.current
+        : 0;
+      setSessionElapsedMs(accumulatedSessionMsRef.current + activeSegmentMs);
+    };
+    updateElapsed();
+    const timer = setInterval(updateElapsed, 1000);
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") {
+        if (activeSessionSegmentStartedAtRef.current === null) {
+          activeSessionSegmentStartedAtRef.current = Date.now();
+        }
+      } else if (activeSessionSegmentStartedAtRef.current !== null) {
+        accumulatedSessionMsRef.current +=
+          Date.now() - activeSessionSegmentStartedAtRef.current;
+        activeSessionSegmentStartedAtRef.current = null;
+      }
+      updateElapsed();
+    });
+
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
+  }, [sessionOpen]);
 
   if (!isHydrated) {
     return (
@@ -313,6 +336,15 @@ export default function TodayScreen() {
       uri: payload.uri,
     };
 
+    if (recordingRetry) {
+      setRetryTake(recordedTake);
+      setRetryAnalysis(null);
+      setAnalysisSource(null);
+      setSessionStep("analyzing");
+      await analyzeRetryTake(recordedTake);
+      return;
+    }
+
     setFirstTake(recordedTake);
     setFirstAnalysis(null);
     setRetryAnalysis(null);
@@ -329,12 +361,18 @@ export default function TodayScreen() {
   }
 
   function startTrainingSession() {
+    activeSessionSegmentStartedAtRef.current = Date.now();
+    accumulatedSessionMsRef.current = 0;
+    creditedSessionMsRef.current = 0;
+    setSessionElapsedMs(0);
     setSessionOpen(true);
     setSessionStep("detail");
     setActiveExerciseIndex(
       firstIncompleteExerciseIndex >= 0 ? firstIncompleteExerciseIndex : 0,
     );
     setFirstTake(null);
+    setRetryTake(null);
+    setRecordingRetry(false);
     setLiveSessionKey((current) => current + 1);
     setFirstAnalysis(null);
     setRetryAnalysis(null);
@@ -345,21 +383,26 @@ export default function TodayScreen() {
     setSessionOpen(false);
     setSessionStep("detail");
     setFirstTake(null);
+    setRetryTake(null);
+    setRecordingRetry(false);
     setFirstAnalysis(null);
     setRetryAnalysis(null);
     setAnalysisSource(null);
+    activeSessionSegmentStartedAtRef.current = null;
+    accumulatedSessionMsRef.current = 0;
+    creditedSessionMsRef.current = 0;
+    setSessionElapsedMs(0);
   }
 
-  function redoLiveSession() {
-    setFirstTake(null);
+  function startRetry() {
+    setRetryTake(null);
+    setRecordingRetry(true);
     setLiveSessionKey((current) => current + 1);
-    setFirstAnalysis(null);
     setRetryAnalysis(null);
-    setAnalysisSource(null);
     setSessionStep("live");
   }
 
-  function completeLiveSession() {
+  async function completeLiveSession() {
     const completedIds = currentExercise
       ? completedExerciseIds.includes(currentExercise.id)
         ? completedExerciseIds
@@ -368,33 +411,57 @@ export default function TodayScreen() {
 
     if (currentExercise && firstTake) {
       setCompletedExerciseIds(completedIds);
-      const nextRecordedMs = savedRecordedMs + firstTake.durationMs;
+      const currentSessionElapsedMs =
+        accumulatedSessionMsRef.current +
+        (activeSessionSegmentStartedAtRef.current
+          ? Date.now() - activeSessionSegmentStartedAtRef.current
+          : 0);
+      const sessionContributionMs = Math.max(
+        0,
+        currentSessionElapsedMs - creditedSessionMsRef.current,
+      );
+      const nextActiveTrainingMs =
+        savedActiveTrainingMs + sessionContributionMs;
       const nextCompletedCount = savedTodayClips.length + 1;
-      completeSession(
+      await completeSession(
         {
           exerciseId: currentExercise.id,
           title: currentExercise.title,
           firstTakeUri: firstTake.uri,
+          retryTakeUri: retryTake?.uri,
           firstDurationMs: firstTake.durationMs,
-          retryDurationMs: 0,
-          activeTrainingMs: firstTake.durationMs,
-          recordedPracticeMs: firstTake.durationMs,
+          retryDurationMs: retryTake?.durationMs ?? 0,
+          activeTrainingMs: sessionContributionMs,
+          recordedPracticeMs: firstTake.durationMs + (retryTake?.durationMs ?? 0),
           dailyGoalMet:
             nextCompletedCount >= dailyGoalTotal &&
-            nextRecordedMs >= DAILY_RECORDED_TARGET_MS,
+            nextActiveTrainingMs >= DAILY_TRAINING_TARGET_MS,
           observation:
-            firstAnalysis?.feedback.whatWeHeard ??
+            (retryAnalysis ?? firstAnalysis)?.feedback.whatWeHeard ??
             "Recording completed and saved for your daily progress.",
           comparison:
-            firstAnalysis?.comparison?.summary ?? "First take saved.",
+            retryAnalysis?.comparison?.summary ?? "Two takes saved.",
           createdAt: new Date().toISOString(),
-          analysisMetrics: firstAnalysis?.metrics,
+          analysisMetrics: (retryAnalysis ?? firstAnalysis)?.metrics,
         },
         {
           weekNumber: displayedWeek.weekNumber,
-          dayNumber: selectedDayNumber,
+          dayNumber: state.currentDayNumber,
         },
       );
+      creditedSessionMsRef.current = currentSessionElapsedMs;
+
+      if (nextActiveTrainingMs < DAILY_TRAINING_TARGET_MS) {
+        setSessionStep("detail");
+        setFirstTake(null);
+        setRetryTake(null);
+        setRecordingRetry(false);
+        setLiveSessionKey((current) => current + 1);
+        setFirstAnalysis(null);
+        setRetryAnalysis(null);
+        setAnalysisSource(null);
+        return;
+      }
     }
 
     const nextIncompleteIndex = todayExerciseCards.findIndex(
@@ -405,6 +472,8 @@ export default function TodayScreen() {
       setActiveExerciseIndex(nextIncompleteIndex);
       setSessionStep("detail");
       setFirstTake(null);
+      setRetryTake(null);
+      setRecordingRetry(false);
       setLiveSessionKey((current) => current + 1);
       setFirstAnalysis(null);
       setRetryAnalysis(null);
@@ -431,6 +500,31 @@ export default function TodayScreen() {
         takeKind: "first",
       });
       setFirstAnalysis(analysis);
+      setAnalysisSource("server");
+    } catch {
+      setAnalysisSource("fallback");
+    } finally {
+      setSessionStep("results");
+    }
+  }
+
+  async function analyzeRetryTake(take: RecordedTake) {
+    const drillId = monthOneDrillId;
+    if (!take.uri || !drillId || !firstAnalysis) {
+      setAnalysisSource("fallback");
+      setSessionStep("results");
+      return;
+    }
+
+    try {
+      const analysis = await analyzeMonthOneTake({
+        uri: take.uri,
+        drillId,
+        language: state.language,
+        takeKind: "retry",
+        previousMetrics: firstAnalysis.metrics,
+      });
+      setRetryAnalysis(analysis);
       setAnalysisSource("server");
     } catch {
       setAnalysisSource("fallback");
@@ -495,21 +589,19 @@ export default function TodayScreen() {
             </View>
           </View>
 
+          {permissionDenied || recordingError ? (
+            <View style={styles.note}>
+              <MaterialIcons name="mic-off" size={20} color={theme.warning} />
+              <Text style={styles.noteText}>
+                {recordingError ??
+                  "Microphone access is off. Enable it in system settings to record a practice take."}
+              </Text>
+            </View>
+          ) : null}
+
           <ForYouStack
-            dayLabel={`${text.common.day} ${selectedDayNumber}`}
-            selectedDayNumber={selectedDayNumber}
-            selectedWeekNumber={selectedWeekNumber}
-            weeks={selectableWeeks}
             exercises={todayExerciseCards}
             text={text}
-            onSelectWeek={(weekNumber) => {
-              setSelectedWeekNumber(weekNumber);
-              setActiveExerciseIndex(0);
-            }}
-            onSelectDay={(dayNumber) => {
-              setSelectedDayNumber(dayNumber);
-              setActiveExerciseIndex(0);
-            }}
             onMoveExercise={(fromIndex, toIndex) =>
               reorderWeekExercise(displayedWeek.weekNumber, fromIndex, toIndex)
             }
@@ -527,8 +619,8 @@ export default function TodayScreen() {
           visible={goalModalVisible}
           completed={dailyGoalCompleted}
           total={dailyGoalTotal}
-          activeMs={displayedGoalRecordedMs}
-          activeTargetMs={DAILY_RECORDED_TARGET_MS}
+          activeMs={displayedGoalActiveMs}
+          activeTargetMs={DAILY_TRAINING_TARGET_MS}
           language={state.language}
           fade={goalFade}
           onClose={closeGoalModal}
@@ -546,7 +638,10 @@ export default function TodayScreen() {
             text={text}
             currentExercise={currentExercise}
             liveSessionKey={liveSessionKey}
-            firstAnalysis={firstAnalysis}
+            analysis={retryAnalysis ?? firstAnalysis}
+            canFinish={Boolean(retryTake)}
+            trainingElapsedMs={displayedGoalActiveMs}
+            trainingTargetMs={DAILY_TRAINING_TARGET_MS}
             analysisSource={analysisSource}
             language={state.language}
             audioRecorder={audioRecorder}
@@ -555,7 +650,7 @@ export default function TodayScreen() {
             onStartLive={() => setSessionStep("live")}
             onLiveComplete={handleLiveSessionComplete}
             onLiveCancel={closeTrainingSession}
-            onRedo={redoLiveSession}
+            onRetry={startRetry}
             onDone={completeLiveSession}
           />
         </SafeAreaProvider>
@@ -579,7 +674,10 @@ function TrainingSessionModalContent({
   text,
   currentExercise,
   liveSessionKey,
-  firstAnalysis,
+  analysis,
+  canFinish,
+  trainingElapsedMs,
+  trainingTargetMs,
   analysisSource,
   language,
   audioRecorder,
@@ -588,14 +686,17 @@ function TrainingSessionModalContent({
   onStartLive,
   onLiveComplete,
   onLiveCancel,
-  onRedo,
+  onRetry,
   onDone,
 }: {
   sessionStep: SessionStep;
   text: (typeof mainAppText)["en"];
   currentExercise?: TodayExerciseCard;
   liveSessionKey: number;
-  firstAnalysis: MonthOneAnalysisResponse | null;
+  analysis: MonthOneAnalysisResponse | null;
+  canFinish: boolean;
+  trainingElapsedMs: number;
+  trainingTargetMs: number;
   analysisSource: "server" | "fallback" | null;
   language: MainAppLanguage;
   audioRecorder: AudioRecorder;
@@ -608,8 +709,8 @@ function TrainingSessionModalContent({
     samples: LiveMeterSample[];
   }) => void | Promise<void>;
   onLiveCancel: () => void;
-  onRedo: () => void;
-  onDone: () => void;
+  onRetry: () => void;
+  onDone: () => void | Promise<void>;
 }) {
   const insets = useReliableSafeInsets();
   const usesFullHeightStep =
@@ -619,6 +720,35 @@ function TrainingSessionModalContent({
 
   const stepContent = (
     <>
+      <View
+        accessibilityRole="progressbar"
+        accessibilityValue={{
+          min: 0,
+          max: trainingTargetMs,
+          now: Math.min(trainingElapsedMs, trainingTargetMs),
+          text: `${formatTimer(Math.min(trainingElapsedMs, trainingTargetMs))} of ${formatTimer(trainingTargetMs)}`,
+        }}
+        style={styles.sessionProgress}
+      >
+        <Text style={styles.sessionProgressLabel}>
+          {text.settings.dailyTraining}
+        </Text>
+        <Text style={styles.sessionProgressTime}>
+          {formatTimer(Math.min(trainingElapsedMs, trainingTargetMs))} /{" "}
+          {formatTimer(trainingTargetMs)}
+        </Text>
+        <View style={styles.sessionProgressTrack}>
+          <View
+            style={[
+              styles.sessionProgressFill,
+              {
+                width: `${Math.min(1, trainingElapsedMs / trainingTargetMs) * 100}%`,
+              },
+            ]}
+          />
+        </View>
+      </View>
+
       {sessionStep === "live" ? (
         <CloseIconButton
           onPress={onClose}
@@ -663,12 +793,13 @@ function TrainingSessionModalContent({
 
       {sessionStep === "results" ? (
         <TrainingResultsScreen
-          analysis={firstAnalysis}
+          analysis={analysis}
+          canFinish={canFinish}
           fallback={analysisSource === "fallback"}
           text={text}
           language={language}
           exerciseTitle={currentExercise?.title}
-          onRedo={onRedo}
+          onRedo={onRetry}
           onDone={onDone}
         />
       ) : null}
@@ -755,25 +886,13 @@ function getExerciseGradient(
 }
 
 function ForYouStack({
-  dayLabel,
-  selectedDayNumber,
-  selectedWeekNumber,
-  weeks,
   exercises,
   text,
-  onSelectWeek,
-  onSelectDay,
   onMoveExercise,
   onPressExercise,
 }: {
-  dayLabel: string;
-  selectedDayNumber: number;
-  selectedWeekNumber: number;
-  weeks: typeof curriculum;
   exercises: TodayExerciseCard[];
   text: (typeof mainAppText)["en"];
-  onSelectWeek: (weekNumber: number) => void;
-  onSelectDay: (dayNumber: number) => void;
   onMoveExercise: (fromIndex: number, toIndex: number) => void;
   onPressExercise: () => void;
 }) {
@@ -786,75 +905,6 @@ function ForYouStack({
 
   return (
     <View style={styles.pickStack}>
-      <Text style={styles.dayLabel}>{dayLabel}</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.weekSelector}
-      >
-        {weeks.map((week) => {
-          const selected = week.weekNumber === selectedWeekNumber;
-
-          return (
-            <Pressable
-              key={week.weekNumber}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              onPress={() => onSelectWeek(week.weekNumber)}
-              style={({ pressed }) => [
-                styles.weekChip,
-                selected && styles.weekChipActive,
-                pressed && styles.weekChipPressed,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.weekChipText,
-                  selected && styles.weekChipTextActive,
-                ]}
-              >
-                {fillTemplate(text.today.weekChip, {
-                  number: week.weekNumber,
-                })}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.daySelector}
-      >
-        {Array.from({ length: 7 }, (_, index) => {
-          const dayNumber = index + 1;
-          const selected = dayNumber === selectedDayNumber;
-
-          return (
-            <Pressable
-              key={dayNumber}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              onPress={() => onSelectDay(dayNumber)}
-              style={({ pressed }) => [
-                styles.dayChip,
-                selected && styles.dayChipActive,
-                pressed && styles.dayChipPressed,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.dayChipText,
-                  selected && styles.dayChipTextActive,
-                ]}
-              >
-                {text.common.day} {dayNumber}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
       <View style={[styles.exerciseDeck, { height: deckHeight }]}>
         {backExercises.map((exercise, index) => {
           const top = (backExercises.length - index - 1) * peekStep;
@@ -1140,6 +1190,7 @@ function DailyGoalCard({
   language: MainAppLanguage;
 }) {
   const timeProgress = Math.min(1, activeMs / activeTargetMs);
+  const displayedActiveMs = Math.min(activeMs, activeTargetMs);
   const labels = mainAppText[language];
   const title = labels.today.dailyGoal;
   const timeLabel = labels.settings.dailyTraining;
@@ -1170,7 +1221,7 @@ function DailyGoalCard({
         <View style={styles.goalMeter}>
           <View style={[styles.goalRing, { borderColor: timeRingColor }]}>
             <Text style={styles.goalTimeCircleValue}>
-              {formatTimer(activeMs)}
+              {formatTimer(displayedActiveMs)}
             </Text>
             <Text style={styles.goalTimeCircleTotal}>
               / {formatTimer(activeTargetMs)}
@@ -1248,163 +1299,6 @@ function formatTimer(durationMs: number) {
   return `${minutes}:${seconds}`;
 }
 
-function PrimaryAction({
-  label,
-  icon,
-  gradient = "integration",
-  onPress,
-}: {
-  label: string;
-  icon?: ComponentProps<typeof MaterialIcons>["name"];
-  gradient?: CardGradientVariant;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.primaryButton,
-        pressed && styles.primaryPressed,
-      ]}
-    >
-      <CardGradientBackground variant={gradient} />
-      <Text style={styles.primaryText}>{label}</Text>
-      {icon ? (
-        <MaterialIcons name={icon} size={22} color={theme.textMuted} />
-      ) : null}
-    </Pressable>
-  );
-}
-
-function SessionCard({
-  icon,
-  title,
-  detail,
-}: {
-  icon: ComponentProps<typeof MaterialIcons>["name"];
-  title: string;
-  detail: string;
-}) {
-  return (
-    <View style={styles.sessionCard}>
-      <View style={styles.sessionIcon}>
-        <MaterialIcons name={icon} size={20} color={theme.primaryBright} />
-      </View>
-      <View style={styles.sessionCopy}>
-        <Text style={styles.sessionTitle}>{title}</Text>
-        <Text style={styles.sessionDetail}>{detail}</Text>
-      </View>
-    </View>
-  );
-}
-
-function FeedbackBlock({ label, detail }: { label: string; detail: string }) {
-  return (
-    <View style={styles.feedbackBlock}>
-      <Text style={styles.feedbackLabel}>{label}</Text>
-      <Text style={styles.feedbackDetail}>{detail}</Text>
-    </View>
-  );
-}
-
-function AnalysisLoadingState({
-  message,
-  text,
-}: {
-  message: string;
-  text: (typeof mainAppText)["en"];
-}) {
-  return (
-    <View style={styles.analysisLoadingPanel} accessibilityRole="progressbar">
-      <SignalWave active />
-      <Text style={styles.analysisLoadingTitle}>
-        {text.today.analyzingTake}
-      </Text>
-      <Text style={styles.analysisLoadingBody}>{message}</Text>
-      <LoadingDots />
-    </View>
-  );
-}
-
-function AnalysisPanel({
-  analysis,
-  title,
-  text,
-  language,
-}: {
-  analysis: MonthOneAnalysisResponse;
-  title: string;
-  text: typeof mainAppText.en;
-  language: MainAppLanguage;
-}) {
-  const safetyText =
-    analysis.safetyFlags.length > 0
-      ? analysis.safetyFlags.join(", ").replaceAll("_", " ")
-      : null;
-  const metricItems = analysisMetricItems(analysis, language);
-
-  return (
-    <View style={styles.analysisPanel}>
-      <View style={styles.analysisHeader}>
-        <Text style={styles.panelTitle}>{title}</Text>
-        <View style={styles.analysisPills}>
-          <Text style={styles.analysisPill}>
-            {analysis.quality.replaceAll("_", " ")}
-          </Text>
-          <Text style={styles.analysisPill}>
-            {analysis.drillId.replaceAll("_", " ")}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.metricGuide}>
-        <Text style={styles.metricGuideTitle}>{metricGuideTitle(language)}</Text>
-        <View style={styles.analysisMetrics}>
-          {metricItems.map((item) => (
-            <AnalysisMetricCard key={item.label} item={item} />
-          ))}
-        </View>
-      </View>
-
-      <AnalysisLine
-        label={text.today.whatWeHeard}
-        detail={analysis.feedback.whatWeHeard}
-      />
-      <AnalysisLine
-        label={text.today.whatItMeans}
-        detail={analysis.feedback.whatItOftenMeans}
-      />
-      <AnalysisLine
-        label={text.today.oneFix}
-        detail={analysis.feedback.oneThingToTry}
-      />
-      <AnalysisLine
-        label={text.today.retryRule}
-        detail={analysis.feedback.retryGoal}
-      />
-      {analysis.comparison ? (
-        <AnalysisLine
-          label={text.today.secondTakeComparison}
-          detail={analysis.comparison.summary}
-        />
-      ) : null}
-      {safetyText ? (
-        <Text style={styles.analysisSafety}>{safetyText}</Text>
-      ) : null}
-    </View>
-  );
-}
-
-function AnalysisLine({ label, detail }: { label: string; detail: string }) {
-  return (
-    <View style={styles.analysisLine}>
-      <Text style={styles.feedbackLabel}>{label}</Text>
-      <Text style={styles.feedbackDetail}>{detail}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: theme.backgroundDeep,
@@ -1421,6 +1315,39 @@ const styles = StyleSheet.create({
   },
   sessionContentFlex: {
     flex: 1,
+  },
+  sessionProgress: {
+    alignItems: "center",
+    alignSelf: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    maxWidth: 520,
+    width: "100%",
+  },
+  sessionProgressLabel: {
+    color: theme.textMuted,
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  sessionProgressTime: {
+    color: theme.text,
+    fontSize: 12,
+    fontVariant: ["tabular-nums"],
+    fontWeight: "900",
+  },
+  sessionProgressTrack: {
+    backgroundColor: theme.border,
+    borderRadius: 999,
+    height: 5,
+    overflow: "hidden",
+    width: "100%",
+  },
+  sessionProgressFill: {
+    backgroundColor: theme.primaryBright,
+    height: "100%",
   },
   content: {
     gap: SPACE * 5,

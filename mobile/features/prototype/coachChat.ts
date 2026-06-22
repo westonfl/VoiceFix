@@ -1,6 +1,6 @@
 import { fetch } from "expo/fetch";
 
-import { getAnalysisServerUrl } from "@/constants/env";
+import { getAnalysisServerUrl, getApiHeaders } from "@/constants/env";
 
 import type { MainAppLanguage } from "./localization";
 
@@ -62,6 +62,7 @@ export async function askCoach(input: {
     const response = await fetch(url, {
       method: "POST",
       headers: {
+        ...getApiHeaders(),
         "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
@@ -128,6 +129,7 @@ export async function streamCoach(
     const response = await fetch(url, {
       method: "POST",
       headers: {
+        ...getApiHeaders(),
         Accept: "text/event-stream",
         "Content-Type": "application/json",
       },

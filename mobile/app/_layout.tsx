@@ -24,6 +24,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="week/[weekNumber]" options={{ headerShown: false }} />
                 <Stack.Screen name="testing-center/[month]" options={{ headerShown: false }} />
+                <Stack.Screen name="legal" options={{ headerShown: false }} />
                 <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
               </Stack>
               <StatusBar style="dark" />

@@ -57,6 +57,9 @@ export default function WeekPlanScreen() {
   };
   const isCurrentWeek = week.weekNumber === state.currentWeekNumber;
   const isComingSoon = week.weekNumber > 4;
+  const isLocked =
+    !isComingSoon && week.weekNumber > state.currentWeekNumber;
+  const isUnavailable = isComingSoon || isLocked;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -75,16 +78,20 @@ export default function WeekPlanScreen() {
 
         <View style={styles.header}>
           <Text style={styles.title}>{weekDisplay.title}</Text>
-          {!isComingSoon ? (
+          {!isUnavailable ? (
             <Text style={styles.weekGoal}>
               {displaySessionText(week.goal, state.language)}
             </Text>
           ) : (
-            <Text style={styles.body}>{text.journey.monthOneOnly}</Text>
+            <Text style={styles.body}>
+              {isComingSoon
+                ? text.journey.monthOneOnly
+                : text.journey.locked}
+            </Text>
           )}
         </View>
 
-        {isComingSoon ? (
+        {isUnavailable ? (
           <View style={styles.panelCard}>
             <View style={styles.panelHeader}>
               <MaterialIcons
@@ -92,9 +99,17 @@ export default function WeekPlanScreen() {
                 size={20}
                 color={theme.primaryBright}
               />
-              <Text style={styles.panelTitle}>{text.journey.comingSoon}</Text>
+              <Text style={styles.panelTitle}>
+                {isComingSoon
+                  ? text.journey.comingSoon
+                  : text.journey.locked}
+              </Text>
             </View>
-            <Text style={styles.panelBody}>{text.journey.comingSoonBody}</Text>
+            <Text style={styles.panelBody}>
+              {isComingSoon
+                ? text.journey.comingSoonBody
+                : text.journey.completeCurrentWeek}
+            </Text>
           </View>
         ) : (
           <>

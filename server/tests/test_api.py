@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from scipy.io import wavfile
 
 from app import chat as chat_module
+from app import main as main_module
 from app.audio import SAMPLE_RATE
 from app.main import app
 
@@ -25,6 +26,43 @@ def test_health():
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_api_key_is_required_when_configured(monkeypatch):
+    monkeypatch.setattr(main_module, "REHEAR_API_KEY", "test-client-key")
+
+    unauthorized = client.post(
+        "/api/chat",
+        json={"messages": [{"role": "user", "content": "Help"}]},
+    )
+    authorized = client.post(
+        "/api/chat",
+        headers={"X-Rehear-API-Key": "test-client-key"},
+        json={"messages": [{"role": "user", "content": "Help"}]},
+    )
+
+    assert unauthorized.status_code == 401
+    assert authorized.status_code == 503
+
+
+def test_api_rate_limit(monkeypatch):
+    monkeypatch.setattr(main_module, "RATE_LIMIT_PER_MINUTE", 1)
+    headers = {"X-Forwarded-For": "rate-limit-test"}
+
+    first = client.post(
+        "/api/chat",
+        headers=headers,
+        json={"messages": [{"role": "user", "content": "Help"}]},
+    )
+    limited = client.post(
+        "/api/chat",
+        headers=headers,
+        json={"messages": [{"role": "user", "content": "Help again"}]},
+    )
+
+    assert first.status_code == 503
+    assert limited.status_code == 429
+    assert limited.headers["retry-after"] == "60"
 
 
 def test_chat_rejects_empty_messages():
@@ -185,6 +223,19 @@ def test_month_one_analyze_accepts_wav():
     assert body["drillId"] == "gentle_hum"
     assert "metrics" in body
     assert "feedback" in body
+
+
+def test_month_one_analyze_rejects_oversized_audio(monkeypatch):
+    monkeypatch.setattr(main_module, "MAX_AUDIO_BYTES", 16)
+    samples = np.zeros(SAMPLE_RATE, dtype=np.float32)
+
+    response = client.post(
+        "/api/month-one/analyze",
+        data={"drill_id": "gentle_hum", "language": "en", "take_kind": "first"},
+        files={"audio": ("large.wav", wav_bytes(samples), "audio/wav")},
+    )
+
+    assert response.status_code == 413
 
 
 def test_each_month_one_exercise_analyzer_is_supported():

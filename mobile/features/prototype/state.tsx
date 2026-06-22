@@ -25,6 +25,10 @@ import {
   cancelTrainingReminder,
   syncTrainingReminder,
 } from "@/features/settings/trainingReminders";
+import {
+  deleteStoredRecordings,
+  persistRecording,
+} from "@/features/training/recordingStorage";
 
 export type SavedClip = {
   id: string;
@@ -81,6 +85,17 @@ export function isMonthlyTestPassed(
   return true;
 }
 
+export function isMonthOneTrainingComplete(
+  state: Pick<PrototypeUserState, "savedClips">,
+): boolean {
+  return state.savedClips.some(
+    (clip) =>
+      clip.weekNumber === 4 &&
+      clip.dayNumber === DAYS_PER_WEEK &&
+      clip.dailyGoalMet === true,
+  );
+}
+
 export type PrototypeUserState = {
   onboardingComplete: boolean;
   placement?: PlacementResult;
@@ -95,6 +110,8 @@ export type PrototypeUserState = {
   streak: StreakState;
   savedClips: SavedClip[];
   completedToday: boolean;
+  lastPracticeDate?: string;
+  lastGoalDate?: string;
   language: MainAppLanguage;
   exerciseOrdersByWeek: Record<string, string[]>;
   monthlyTests: Record<string, MonthlyTestResult>;
@@ -108,7 +125,7 @@ type PrototypeContextValue = {
   completeSession: (
     clip: Omit<SavedClip, "id" | "weekNumber" | "dayNumber">,
     target?: { weekNumber: number; dayNumber: number },
-  ) => void;
+  ) => Promise<void>;
   resetPrototype: () => void;
   setTrainingPreference: (
     key: "trainingTime" | "notificationTone",
@@ -193,6 +210,10 @@ function normalizeMonthlyTests(
 function normalizeStoredState(
   parsed: StoredPrototypeUserState,
 ): PrototypeUserState {
+  const today = localDateKey();
+  const streakIsCurrent =
+    parsed.lastPracticeDate === today ||
+    parsed.lastPracticeDate === previousLocalDateKey();
   const currentWeekNumber = clampNumber(
     parsed.currentWeekNumber,
     1,
@@ -229,6 +250,45 @@ function normalizeStoredState(
       typeof parsed.notificationsEnabled === "boolean"
         ? parsed.notificationsEnabled
         : initialState.notificationsEnabled,
+    completedToday: parsed.lastGoalDate === today,
+    streak: {
+      ...initialState.streak,
+      ...parsed.streak,
+      current: streakIsCurrent ? (parsed.streak?.current ?? 0) : 0,
+    },
+  };
+}
+
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function previousLocalDateKey() {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return localDateKey(yesterday);
+}
+
+function advanceJourney(
+  weekNumber: number,
+  dayNumber: number,
+): Pick<PrototypeUserState, "currentWeekNumber" | "currentDayNumber" | "journeyDay"> {
+  if (dayNumber < DAYS_PER_WEEK) {
+    return {
+      currentWeekNumber: weekNumber,
+      currentDayNumber: dayNumber + 1,
+      journeyDay: Math.min(TOTAL_JOURNEY_DAYS, (weekNumber - 1) * 7 + dayNumber + 1),
+    };
+  }
+
+  const nextWeek = Math.min(MAX_AVAILABLE_WEEK, weekNumber + 1);
+  return {
+    currentWeekNumber: nextWeek,
+    currentDayNumber: nextWeek === weekNumber ? dayNumber : 1,
+    journeyDay: Math.min(TOTAL_JOURNEY_DAYS, (nextWeek - 1) * 7 + 1),
   };
 }
 
@@ -385,17 +445,49 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
     }));
   }
 
-  function completeSession(
+  async function completeSession(
     clip: Omit<SavedClip, "id" | "weekNumber" | "dayNumber">,
     target?: { weekNumber: number; dayNumber: number },
   ) {
+    const clipId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    let firstTakeUri = clip.firstTakeUri;
+    let retryTakeUri = clip.retryTakeUri;
+
+    try {
+      firstTakeUri = persistRecording(clip.firstTakeUri, `${clipId}-first`);
+      retryTakeUri = persistRecording(clip.retryTakeUri, `${clipId}-retry`);
+    } catch {
+      // Keep the session even if durable file storage is temporarily unavailable.
+    }
+
     setState((current) => {
-      const nextStreak = current.completedToday
+      const today = localDateKey();
+      const isFirstPracticeToday = current.lastPracticeDate !== today;
+      const nextStreak = !isFirstPracticeToday
         ? current.streak.current
-        : current.streak.current + 1;
+        : current.lastPracticeDate === previousLocalDateKey()
+          ? current.streak.current + 1
+          : 1;
+      const completesCurrentDay = Boolean(
+        clip.dailyGoalMet &&
+          current.lastGoalDate !== today &&
+          (target?.weekNumber ?? current.currentWeekNumber) === current.currentWeekNumber &&
+          (target?.dayNumber ?? current.currentDayNumber) === current.currentDayNumber,
+      );
+      const journey = completesCurrentDay
+        ? advanceJourney(current.currentWeekNumber, current.currentDayNumber)
+        : {
+            currentWeekNumber: current.currentWeekNumber,
+            currentDayNumber: current.currentDayNumber,
+            journeyDay: current.journeyDay,
+          };
+
       return {
         ...current,
-        completedToday: true,
+        ...journey,
+        completedToday: current.lastGoalDate === today || completesCurrentDay,
+        lastPracticeDate: today,
+        lastGoalDate: completesCurrentDay ? today : current.lastGoalDate,
         streak: {
           ...current.streak,
           current: nextStreak,
@@ -404,7 +496,9 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
         savedClips: [
           {
             ...clip,
-            id: `${Date.now()}`,
+            id: clipId,
+            firstTakeUri,
+            retryTakeUri,
             weekNumber: target?.weekNumber ?? current.currentWeekNumber,
             dayNumber: target?.dayNumber ?? current.currentDayNumber,
           },
@@ -425,6 +519,11 @@ export function PrototypeProvider({ children }: PropsWithChildren) {
     AsyncStorage.removeItem(LEGACY_STORAGE_KEY).catch(() => {
       // Reset still works in memory if legacy cleanup fails.
     });
+    try {
+      deleteStoredRecordings();
+    } catch {
+      // Local state reset should still succeed if a stale file cannot be removed.
+    }
   }
 
   function setTrainingPreference(
