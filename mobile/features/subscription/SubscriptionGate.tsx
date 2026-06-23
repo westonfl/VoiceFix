@@ -17,6 +17,33 @@ import { usePrototype } from '@/features/prototype/state';
 import { CustomPaywall } from './CustomPaywall';
 import { useSubscription } from './SubscriptionProvider';
 
+function getSubscriptionErrorCopy(error: string | null) {
+  if (!__DEV__) {
+    return 'Subscriptions are not available in this build yet. Please try again later or restore an existing purchase.';
+  }
+
+  if (!error) {
+    return 'RevenueCat could not load the current offering. Check the app configuration and try again.';
+  }
+
+  const lowerError = error.toLowerCase();
+
+  if (
+    lowerError.includes('no app store products') ||
+    lowerError.includes('no available packages') ||
+    lowerError.includes('offerings are empty') ||
+    lowerError.includes('offerings-empty')
+  ) {
+    return [
+      'RevenueCat is connected, but this build has no products to show.',
+      '',
+      'Check that RevenueCat has an active current offering with App Store products for bundle ID com.ov.rehear, and that those products are attached to the pro entitlement.',
+    ].join('\n');
+  }
+
+  return 'RevenueCat could not verify subscription access. Check the configuration, network, and store setup, then try again.';
+}
+
 export function SubscriptionGate({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const { state, isHydrated } = usePrototype();
@@ -77,7 +104,7 @@ export function SubscriptionGate({ children }: PropsWithChildren) {
       <AccessShell
         mode="error"
         title="We couldn’t open subscriptions"
-        body={__DEV__ && error ? error : 'Check your connection and try again.'}
+        body={getSubscriptionErrorCopy(error)}
         primaryLabel="Try again"
         onPrimary={refresh}
         secondaryLabel={restoring ? 'Restoring…' : 'Restore purchases'}
