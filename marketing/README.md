@@ -16,7 +16,7 @@ Then open `http://localhost:4173`.
 
 Deploy the contents of this directory to any static host. Before publishing:
 
-1. Confirm that `support@rehear.app` is a monitored address, or replace it.
+1. Confirm that `ask.rehear@outlook.com` is monitored.
 2. Replace the operator notes in the Privacy Policy and Terms with the legal
    entity, mailing address, governing state, and final dispute language.
 3. Add the deployed Privacy, Terms, and Support URLs to App Store Connect,

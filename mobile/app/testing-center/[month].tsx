@@ -326,7 +326,7 @@ export default function TestingCenterScreen() {
                 : "Record and analyze each check to confirm the Month 1 foundation is stable."
               : state.language === "ko"
                 ? "이 테스트 센터는 곧 열립니다."
-                : "This testing center is coming soon."}
+                : "This testing center is planned for a future update."}
           </Text>
         </View>
 
@@ -427,7 +427,7 @@ export default function TestingCenterScreen() {
             <Text style={styles.body}>
               {state.language === "ko"
                 ? "현재는 1개월 테스트만 사용할 수 있습니다."
-                : "Only the Month 1 test is available right now."}
+                : "Month 1 is the available testing center in this version."}
             </Text>
           </View>
         )}

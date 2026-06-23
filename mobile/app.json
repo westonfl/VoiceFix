@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.ov92.Rehear",
+      "bundleIdentifier": "com.ov.rehear",
       "buildNumber": "1",
       "appleTeamId": "X79VZ448P2",
       "infoPlist": {
@@ -20,7 +20,7 @@
       }
     },
     "android": {
-      "package": "com.ov92.rehear",
+      "package": "com.ov.rehear",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#07111F",

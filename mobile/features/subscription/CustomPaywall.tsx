@@ -27,7 +27,7 @@ import { useSubscription } from './SubscriptionProvider';
 const benefitCopy = [
   'A guided voice session every day',
   'Plain feedback after each take',
-  'Your complete six-month practice path',
+  'A 3-month path, with Month 1 available now',
   'Progress saved in your private journal',
 ];
 
@@ -174,6 +174,7 @@ export function CustomPaywall({ offering }: { offering: PurchasesOffering }) {
             accessibilityRole="button"
             disabled={restorePending}
             onPress={handleRestore}
+            style={styles.footerLinkTarget}
           >
             <Text style={styles.footerLink}>
               {restorePending ? 'Restoring…' : 'Restore purchases'}
@@ -231,18 +232,25 @@ function PlanOption({
   );
 }
 
-function FooterLink({ label, url }: { label: string; url: string | null }) {
+function FooterLink({ label, url }: { label: string; url: string }) {
   async function openLink() {
-    if (!url) {
-      Alert.alert(`${label} link isn’t configured yet.`);
-      return;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert(
+        `Couldn’t open ${label.toLowerCase()}`,
+        'Check your connection and try again.',
+      );
     }
-
-    await Linking.openURL(url);
   }
 
   return (
-    <Pressable accessibilityRole="link" onPress={openLink}>
+    <Pressable
+      accessibilityLabel={`${label}, opens in browser`}
+      accessibilityRole="link"
+      onPress={openLink}
+      style={styles.footerLinkTarget}
+    >
       <Text style={styles.footerLink}>{label}</Text>
     </Pressable>
   );
@@ -556,6 +564,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     textDecorationLine: 'underline',
+  },
+  footerLinkTarget: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
   },
   footerDot: {
     width: 3,

@@ -38,11 +38,11 @@ const koScreens: Record<string, LocalizedScreen> = {
   },
   'ONB-02': {
     shortTitle: '약속',
-    eyebrow: '90일 약속',
+    eyebrow: '4주 기초 과정',
     title: '목소리는 다시 돌아올 때 달라집니다.',
-    body: 'Rehear는 90일 훈련 여정입니다. 여기서는 지구력이 중요합니다. 돌아와서 정직하게 녹음하고, 작은 한 가지를 고치고, 내일 다시 오세요. 그 노력이 곧 연습입니다.',
-    primaryAction: '3개월 여정 시작',
-    bullets: ['고정된 12주 경로', '강도보다 지구력', '월 1회 유예일', '매 세션 한 번의 재시도'],
+    body: 'Rehear는 4주간의 호흡과 공명 기초 훈련으로 시작합니다. 솔직하게 녹음하고, 작은 한 가지를 조정한 뒤 내일 다시 돌아오세요.',
+    primaryAction: '1개월 시작',
+    bullets: ['4주 동안 매일 순서대로', '강도보다 지구력', '월 1회 유예일', '매 세션 한 번의 재시도'],
   },
   'ONB-03': {
     shortTitle: '노래방 아님',
@@ -327,7 +327,7 @@ const koScreens: Record<string, LocalizedScreen> = {
       morning: { label: '아침', detail: '짧은 목소리 준비로 하루를 시작합니다.' },
       afternoon: { label: '오후', detail: '하루가 시끄러워지기 전 중간 리셋을 합니다.' },
       evening: { label: '저녁', detail: '사적이고 꾸준하게 할 수 있는 시간에 훈련합니다.' },
-      custom: { label: '나중에 선택', detail: '지금은 프로토타입 기본값을 유지합니다.' },
+      custom: { label: '나중에 선택', detail: '지금은 추천 저녁 시간을 사용합니다.' },
     },
   },
   'ONB-28': {
